@@ -1,0 +1,21 @@
+services:
+  api:
+    build: ./src
+    ports:
+      - "8080:80"
+
+  eventstoredb:
+    build: ./src/EvansFreshRoast.EventStore
+    ports:
+      - "5432:5432"
+
+  readmodelsdb:
+    build: ./src/EvansFreshRoast.ReadModels
+    ports:
+      - "2345:5432"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
