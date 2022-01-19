@@ -2,6 +2,11 @@
 
 [<AutoOpen>]
 module Result =
+    let toOption =
+        function
+        | Ok a -> Some a
+        | Error _ -> None
+
     let ofOption noneValue opt =
         match opt with
         | Some a -> Ok a

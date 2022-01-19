@@ -18,6 +18,7 @@ let loadCustomerEvents connectionString =
 let saveCustomerEvent connectionString (event: DomainEvent<Customer, Event>) =
     let getEventName =
         function
+        | Created _ -> "Customer Created"
         | Updated _ -> "Customer Updated"
         | Subscribed _ -> "Customer Subscribed"
         | Unsubscribed _ -> "Customer Unsubscribed"

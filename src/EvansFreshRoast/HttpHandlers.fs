@@ -12,6 +12,10 @@ module HttpHandlers =
     open EvansFreshRoast.Framework
     open EvansFreshRoast.Utils
 
+    type DtoParseError =
+        | DtoFieldMissing
+        | DomainValidationErr of ConstrainedTypeError<DomainValidationError>
+
     let eventStoreConnectionString =
         // "Host=eventstoredb;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
         "Host=localhost;Port=5432;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
@@ -31,19 +35,29 @@ module HttpHandlers =
             | Error b -> Error b
         | None -> Ok None
 
-    let toDomainValue (f: 'a -> Result<'b, ConstrainedTypeError<DomainValidationError>>) (rawValue: 'a) =
-        rawValue
+    let toOptionalDomainValue
+        (ctor: 'a -> Result<'b, ConstrainedTypeError<DomainValidationError>>)
+        (rawVal: 'a) =
+        rawVal
         |> Option.ofObj
-        |> Option.map f
+        |> Option.map ctor
         |> invert
+
+    let toRequiredDomainValue
+        (ctor: 'a -> Result<'b, ConstrainedTypeError<DomainValidationError>>)
+        (rawVal: 'a) =
+        rawVal
+        |> Option.ofObj
+        |> Result.ofOption DtoFieldMissing
+        |> Result.bind (ctor >> Result.mapError DomainValidationErr)
 
     let handlePostCoffee (next: HttpFunc) (ctx: HttpContext) =
         task {
             let! dto = ctx.BindJsonAsync<CreateCoffeeDto>()
 
-            let name = dto.Name |> toDomainValue CoffeeName.create
-            let description = dto.Description |> toDomainValue CoffeeDescription.create
-            let price = dto.PricePerBag |> UsdPrice.create |> Result.map Some
+            let name = dto.Name |> toOptionalDomainValue CoffeeName.create
+            let description = dto.Description |> toOptionalDomainValue CoffeeDescription.create
+            let price = dto.PricePerBag |>  UsdPrice.create |> Result.map Some
             let weight = dto.WeightPerBag |> OzWeight.create |> Result.map Some
 
             let buildUpdateFields nm desc pr wt: CoffeeUpdateFields =
@@ -138,10 +152,10 @@ module HttpHandlers =
 
             let buildUpdateFields nm phn =
                 { Name = nm
-                  PhoneNumber = phn }: CustomerUpdateFields
+                  PhoneNumber = phn }: CustomerCreateFields
 
-            let name = dto.Name |> toDomainValue CustomerName.create
-            let phoneNumber = dto.PhoneNumber |> toDomainValue UsPhoneNumber.create
+            let name = dto.Name |> toRequiredDomainValue CustomerName.create
+            let phoneNumber = dto.PhoneNumber |> toRequiredDomainValue UsPhoneNumber.create
 
             let handleCommand =
                 Aggregate.createHandler
@@ -151,7 +165,7 @@ module HttpHandlers =
 
             let cmdResultAsync =
                 buildUpdateFields <!> name <*> phoneNumber
-                |> Result.map Customer.Command.Update
+                |> Result.map Customer.Command.Create
                 |> Result.map (handleCommand <| Id.newId())
 
             match cmdResultAsync with
