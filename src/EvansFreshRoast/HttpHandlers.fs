@@ -9,13 +9,13 @@ module HttpHandlers =
     open EvansFreshRoast.EventStore.Roast
     open EvansFreshRoast.EventStore.Coffee
     open EvansFreshRoast.EventStore.Customer
-    open EvansFreshRoast.Domain
     open EvansFreshRoast.Framework
     open EvansFreshRoast.Utils
 
     let eventStoreConnectionString =
         // "Host=eventstoredb;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
         "Host=localhost;Port=5432;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
+        |> ConnectionString.create
 
     let handleGetHello (next: HttpFunc) (ctx: HttpContext) =
         task {

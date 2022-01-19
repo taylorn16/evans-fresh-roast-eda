@@ -2,12 +2,12 @@ namespace EvansFreshRoast
 
 open Microsoft.Extensions.Hosting
 open RabbitMQ.Client
-open RabbitMQ.Client.Events
 open System.Text
 open Thoth.Json.Net
 open EvansFreshRoast.Serialization.DomainEvents
 open EvansFreshRoast.Serialization.Customer
 open EvansFreshRoast.Utils
+open EvansFreshRoast.Framework
 open System.Threading
 open System.Threading.Tasks
 open EvansFreshRoast.ReadModels
@@ -25,6 +25,7 @@ type CustomerReadModelConsumer (logger: ILogger<CustomerReadModelConsumer>) =
     let connectionString =
         // "Host=readmodelsdb;Database=evans_fresh_roast_reads;Username=read_models_user;Password=read_models_pass;"
         "Host=localhost;Port=2345;Database=evans_fresh_roast_reads;Username=read_models_user;Password=read_models_pass;"
+        |> ConnectionString.create
 
     let connectionFactory = ConnectionFactory(
         HostName = "localhost", //"rabbitmq",

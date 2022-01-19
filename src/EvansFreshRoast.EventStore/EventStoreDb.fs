@@ -46,7 +46,7 @@ module Db =
         async {
             try
                 return!
-                    connectionString
+                    (ConnectionString.value connectionString)
                     |> Sql.connect
                     |> Sql.query sql
                     |> Sql.parameters
@@ -76,7 +76,7 @@ module Db =
         async {
             try
                 return!
-                    connectionString
+                    (ConnectionString.value connectionString)
                     |> Sql.connect
                     |> Sql.query sql
                     |> Sql.parameters [ "aggregateId", Sql.uuid aggregateId ]
@@ -97,7 +97,7 @@ module Db =
         }
 
     let loadEvents
-        (connectionString: string)
+        (connectionString: ConnectionString)
         (decoder: Decoder<'Event>)
         (mapDbError: EventStoreDbError -> 'Error)
         (mapDecoderError: string -> 'Error)
@@ -132,7 +132,7 @@ module Db =
         }
 
     let saveEvent
-        (connectionString: string)
+        (connectionString: ConnectionString)
         (encoder: Encoder<'Event>)
         (aggregateName: string)
         (getEventName: 'Event -> string)

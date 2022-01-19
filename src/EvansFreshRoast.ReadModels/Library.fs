@@ -9,7 +9,7 @@ open EvansFreshRoast.Utils
 module Customer =
     let updateReadModel connectionString (event: DomainEvent<Customer, Event>) =
         async {
-            let connection = Sql.connect connectionString
+            let connection = Sql.connect <| ConnectionString.value connectionString
 
             let rec generateRecursiveJsonbSet column (pathValues: (string * string) list) =
                 match pathValues with
