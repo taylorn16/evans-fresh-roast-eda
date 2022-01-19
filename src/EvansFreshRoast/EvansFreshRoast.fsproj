@@ -12,7 +12,8 @@
   <ItemGroup>
     <Compile Include="Models.fs" />
     <Compile Include="HttpHandlers.fs" />
-    <Compile Include="CustomerReadModelConsumer.fs" />
+    <Compile Include="EventConsumers/EventConsumerBase.fs" />
+    <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

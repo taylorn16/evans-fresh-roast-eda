@@ -12,6 +12,7 @@ open EvansFreshRoast.HttpHandlers
 open System.Text.Json
 open NodaTime.Serialization.SystemTextJson
 open NodaTime
+open EvansFreshRoast.EventConsumers.ReadModels
 
 // ---------------------------------
 // Web app
@@ -20,10 +21,10 @@ open NodaTime
 let webApp =
     choose [ subRoute "/api/v1"
                  (choose [ GET  >=> choose [ route "/hello" >=> handleGetHello ]
-                           POST >=> choose [ route "/roast" >=> handlePostRoast
-                                             route "/coffee" >=> handlePostCoffee
-                                             routef "/coffee/%O/activate" handleActivateCoffee
-                                             route "/customer" >=> handlePostCustomer ] ])
+                           POST >=> choose [ route "/roasts" >=> handlePostRoast
+                                             route "/coffees" >=> handlePostCoffee
+                                             routef "/coffees/%O/activate" handleActivateCoffee
+                                             route "/customers" >=> handlePostCustomer ] ])
              setStatusCode 404 >=> text "Not Found" ]
 
 // ---------------------------------

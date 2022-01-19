@@ -60,7 +60,7 @@ module Customer =
                             |> Sql.parameters [ "id", uuid ]
                             |> Sql.executeNonQueryAsync
                             |> Async.AwaitTask
-                            |> Async.map (fun _ -> ())
+                            |> Async.Ignore
                             |> Async.map Ok
                         with
                         | _ -> return Error "cheese"
@@ -77,7 +77,7 @@ module Customer =
                         |> Sql.parameters [ "id", uuid ]
                         |> Sql.executeNonQueryAsync
                         |> Async.AwaitTask
-                        |> Async.map (fun _ -> ())
+                        |> Async.Ignore
 
                     return! update
                 | _ ->
@@ -95,7 +95,7 @@ module Customer =
                     |> Sql.parameters [ "id", event.AggregateId |> Id.value |> Sql.uuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
-                    |> Async.map (fun _ -> ())
+                    |> Async.Ignore
                     |> Async.map Ok
                 with
                 | _ ->
