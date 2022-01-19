@@ -40,7 +40,7 @@ module Customer =
     let execute (state: Customer) cmd =
         match cmd with
         | Create fields ->
-            if state = Customer.Empty then
+            if state <> Customer.Empty then
                 Error CustomerAlreadyCreated
             else
                 Ok <| Created fields
