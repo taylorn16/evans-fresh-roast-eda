@@ -5,8 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="BaseTypes.fs" />
-    <Compile Include="DomainTypes.fs" />
-    <Compile Include="Aggregate.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="Coffee.fs" />
     <Compile Include="Customer.fs" />
     <Compile Include="Roast.fs" />
@@ -16,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
   </ItemGroup>
 </Project>

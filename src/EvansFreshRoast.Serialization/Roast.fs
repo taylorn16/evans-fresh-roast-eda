@@ -1,11 +1,9 @@
 module EvansFreshRoast.Serialization.Roast
 
 open Thoth.Json.Net
-open EvansFreshRoast.Domain.BaseTypes
-open EvansFreshRoast.Domain.DomainTypes
+open EvansFreshRoast.Framework
+open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Roast
-open NodaTime
-open System.Text.RegularExpressions
 open EvansFreshRoast.Serialization.Common
 
 let encodeRoastEvent event =

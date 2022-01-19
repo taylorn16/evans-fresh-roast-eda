@@ -19,5 +19,6 @@
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.EventStore\EvansFreshRoast.EventStore.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.ReadModels\EvansFreshRoast.ReadModels.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
   </ItemGroup>
 </Project>

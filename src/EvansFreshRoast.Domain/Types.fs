@@ -1,12 +1,11 @@
-namespace EvansFreshRoast.Domain.DomainTypes
+namespace EvansFreshRoast.Domain
 
 open System.Text.RegularExpressions
-open EvansFreshRoast.Domain.BaseTypes
+open EvansFreshRoast.Framework
 open NodaTime
 open System.Collections.Generic
 
 type CoffeeDescription = private CoffeeDescription of String200
-
 module CoffeeDescription =
     let create desc =
         String200.create desc
@@ -17,7 +16,6 @@ module CoffeeDescription =
     let value = apply id
 
 type CoffeeName = CoffeeName of String100
-
 module CoffeeName =
     let create desc =
         String100.create desc |> Result.map CoffeeName
@@ -31,12 +29,11 @@ type CoffeeStatus =
     | Inactive
 
 type UsdPrice = private UsdPrice of decimal
-
 module UsdPrice =
     let create price =
         match price with
-        | p when p < 0m -> Error PriceIsNegative
-        | p when p > 1000m -> Error PriceExceeds1000
+        | p when p < 0m -> Error <| DomainTypeError PriceIsNegative
+        | p when p > 1000m -> Error <| DomainTypeError PriceExceeds1000
         | _ -> Ok(UsdPrice price)
 
     let apply f (UsdPrice price) = f price
@@ -46,12 +43,11 @@ module UsdPrice =
     let zero = UsdPrice 0m
 
 type OzWeight = private OzWeight of decimal
-
 module OzWeight =
     let create ounces =
         match ounces with
-        | oz when oz < 0m -> Error WeightIsNegative
-        | oz when oz > 800m -> Error WeightExceeds50
+        | oz when oz < 0m -> Error <| DomainTypeError WeightIsNegative
+        | oz when oz > 800m -> Error <| DomainTypeError WeightExceeds50
         | _ -> Ok(OzWeight ounces)
 
     let apply f (OzWeight oz) = f oz
@@ -61,7 +57,6 @@ module OzWeight =
     let zero = OzWeight 0m
 
 type CustomerName = private CustomerName of String100
-
 module CustomerName =
     let create desc =
         String100.create desc |> Result.map CustomerName
@@ -76,7 +71,6 @@ type CustomerStatus =
     | Unsubscribed
 
 type UsPhoneNumber = private UsPhoneNumber of string
-
 module UsPhoneNumber =
     let create phn =
         Regex.Replace(phn, "\D", "").Trim()
@@ -84,7 +78,7 @@ module UsPhoneNumber =
         |> function
             | (s, 11) -> Ok <| s.Substring(1)
             | (s, 10) -> Ok s
-            | _ -> Error <| PhoneNumberFormatIsInvalid
+            | _ -> Error <| DomainTypeError PhoneNumberFormatIsInvalid
 
         |> Result.map UsPhoneNumber
 
@@ -99,12 +93,11 @@ module UsPhoneNumber =
         phn |> apply fmt
 
 type UsdInvoiceAmount = private UsdInvoiceAmount of decimal
-
 module UsdInvoiceAmount =
     let create amt =
         match amt with
-        | a when a < 0m -> Error InvoiceAmountIsNegative
-        | a when a > 1000m -> Error InvoiceAmountExceeds1000
+        | a when a < 0m -> Error <| DomainTypeError InvoiceAmountIsNegative
+        | a when a > 1000m -> Error <| DomainTypeError InvoiceAmountExceeds1000
         | _ -> Ok(UsdInvoiceAmount amt)
 
     let apply f (UsdInvoiceAmount amt) = f amt
@@ -116,8 +109,8 @@ type Quantity = private Quantity of int
 module Quantity =
     let create qty =
         match qty with
-        | q when q < 0 -> Error QuantityIsNegative
-        | q when q > 50 -> Error QuantityExceeds50Bags
+        | q when q < 0 -> Error <| DomainTypeError QuantityIsNegative
+        | q when q > 50 -> Error <| DomainTypeError QuantityExceeds50Bags
         | _ -> Ok(Quantity qty)
 
     let apply f (Quantity qty) = f qty
@@ -131,7 +124,7 @@ module CoffeeReferenceId =
         Regex.IsMatch(ref, "^[A-Z]$")
         |> function
             | true -> Ok <| CoffeeReferenceId ref
-            | false -> Error ReferenceIdMustBeAtoZ
+            | false -> Error <| DomainTypeError ReferenceIdMustBeAtoZ
 
     let apply f (CoffeeReferenceId ref) = f ref
 
@@ -143,8 +136,8 @@ type PaymentMethod =
     | Cash
     | Check
 
-type Coffee =
-    { Id: Id<Coffee>
+type CoffeeProjection =
+    { Id: Id<CoffeeProjection>
       Name: CoffeeName
       Description: CoffeeDescription
       PricePerBag: UsdPrice
@@ -168,7 +161,7 @@ type OrderLineItem =
 type OrderDetails =
     { CustomerId: Id<CustomerProjection>
       Timestamp: OffsetDateTime
-      LineItems: IDictionary<Id<Coffee>, Quantity> }
+      LineItems: IDictionary<Id<CoffeeProjection>, Quantity> }
 
 type Order =
     | UnconfirmedOrder of OrderDetails

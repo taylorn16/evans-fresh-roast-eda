@@ -1,20 +1,21 @@
 module EvansFreshRoast.Serialization.Customer
 
-open EvansFreshRoast.Domain.Customer
-open EvansFreshRoast.Domain.DomainTypes
 open Thoth.Json.Net
+open EvansFreshRoast.Domain
+open EvansFreshRoast.Domain.Customer
 
 let encodeCustomerEvent event =
     match event with
     | Updated fields ->
-        Encode.object [ if fields.Name.IsSome then
-                            "name", Encode.string (CustomerName.value fields.Name.Value)
-                        if fields.PhoneNumber.IsSome then
-                            "phoneNumber", Encode.string (UsPhoneNumber.value fields.PhoneNumber.Value) ]
+        Encode.object
+            [ if fields.Name.IsSome then
+                  "name", Encode.string (CustomerName.value fields.Name.Value)
+              if fields.PhoneNumber.IsSome then
+                  "phoneNumber", Encode.string (UsPhoneNumber.value fields.PhoneNumber.Value) ]
 
-    | Event.Subscribed -> Encode.string "subscribed"
+    | Subscribed -> Encode.string "subscribed"
 
-    | Event.Unsubscribed -> Encode.string "unsubscribed"
+    | Unsubscribed -> Encode.string "unsubscribed"
 
 let decodeCustomerName: Decoder<CustomerName> =
     Decode.string

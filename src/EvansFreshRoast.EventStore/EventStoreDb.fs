@@ -5,8 +5,7 @@ open NodaTime
 open EvansFreshRoast.Utils
 open Npgsql.FSharp
 open Thoth.Json.Net
-open EvansFreshRoast.Domain.BaseTypes
-open EvansFreshRoast.Domain
+open EvansFreshRoast.Framework
 
 type DomainEvent =
     { Id: Guid
@@ -22,39 +21,42 @@ type EventStoreDbError =
     | DatabaseErrorLoadingEvents
 
 [<RequireQualifiedAccess>]
-module EventStoreDb =
+module Db =
     let private createEvent connectionString domainEvent =
+        let sql =
+            """
+            INSERT INTO events
+                ( aggregate_name
+                , aggregate_id
+                , aggregate_version
+                , event_id
+                , event_name
+                , event_payload
+                , created_timestamp )
+            VALUES
+                ( @aggregateName
+                , @aggregateId
+                , @version
+                , @eventId
+                , @eventName
+                , @payload
+                , @timestamp )
+            """
+
         async {
             try
                 return!
                     connectionString
                     |> Sql.connect
-                    |> Sql.query
-                        """
-                    INSERT INTO events
-                        ( aggregate_name
-                        , aggregate_id
-                        , aggregate_version
-                        , event_id
-                        , event_name
-                        , event_payload
-                        , created_timestamp )
-                    VALUES
-                        ( @aggregateName
-                        , @aggregateId
-                        , @version
-                        , @eventId
-                        , @eventName
-                        , @payload
-                        , @timestamp )
-                    """
-                    |> Sql.parameters [ "aggregateName", Sql.string domainEvent.AggregateName
-                                        "aggregateId", Sql.uuid domainEvent.AggregateId
-                                        "version", Sql.int64 domainEvent.Version
-                                        "eventId", Sql.uuid domainEvent.Id
-                                        "eventName", Sql.string domainEvent.EventName
-                                        "payload", Sql.string domainEvent.Payload
-                                        "timestamp", Sql.timestamptz (domainEvent.Timestamp.ToDateTimeOffset()) ]
+                    |> Sql.query sql
+                    |> Sql.parameters
+                        [ "aggregateName", Sql.string domainEvent.AggregateName
+                          "aggregateId", Sql.uuid domainEvent.AggregateId
+                          "version", Sql.int64 domainEvent.Version
+                          "eventId", Sql.uuid domainEvent.Id
+                          "eventName", Sql.string domainEvent.EventName
+                          "payload", Sql.string domainEvent.Payload
+                          "timestamp", Sql.timestamptz (domainEvent.Timestamp.ToDateTimeOffset()) ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.map Ok
@@ -63,18 +65,20 @@ module EventStoreDb =
         }
 
     let private getAllEvents connectionString aggregateId =
+        let sql =
+            """
+            SELECT
+                *
+            FROM events
+            WHERE aggregate_id = @aggregateId ORDER BY created_timestamp
+            """
+        
         async {
             try
                 return!
                     connectionString
                     |> Sql.connect
-                    |> Sql.query
-                        """
-                    SELECT
-                        *
-                    FROM events
-                    WHERE aggregate_id = @aggregateId ORDER BY created_timestamp
-                    """
+                    |> Sql.query sql
                     |> Sql.parameters [ "aggregateId", Sql.uuid aggregateId ]
                     |> Sql.executeAsync (fun read ->
                         { Id = read.uuid "event_id"
@@ -119,7 +123,7 @@ module EventStoreDb =
                               AggregateId = aggregateId
                               Timestamp = evt.Timestamp
                               Version = version
-                              Body = ev }: Aggregate.DomainEvent<'State, 'Event>))
+                              Body = ev }: DomainEvent<'State, 'Event>))
                     |> Result.sequence Seq.head
                     |> Result.map List.ofArray
                     |> Result.mapError mapDecoderError
@@ -133,7 +137,7 @@ module EventStoreDb =
         (aggregateName: string)
         (getEventName: 'Event -> string)
         (mapDbError: EventStoreDbError -> 'Error)
-        (event: Aggregate.DomainEvent<'State, 'Event>)
+        (event: DomainEvent<'State, 'Event>)
         =
         async {
             let domainEvent =

@@ -1,7 +1,7 @@
 namespace EvansFreshRoast.EventStore
 
 open RabbitMQ.Client
-open EvansFreshRoast.Domain.Aggregate
+open EvansFreshRoast.Framework
 open Thoth.Json.Net
 open System.Text
 open EvansFreshRoast.Serialization.Roast
@@ -35,11 +35,11 @@ module Publisher =
         with ex ->
             Error ex
 
-    let publishRoastEvent: DomainEvent<Roast.Roast, Roast.Event> -> Result<unit, exn> =
+    let publishRoastEvent: DomainEvent<Roast, Roast.Event> -> Result<unit, exn> =
         publishEvent "domain.events.roast" encodeRoastEvent
 
-    let publishCoffeeEvent: DomainEvent<Coffee.Coffee, Coffee.Event> -> Result<unit, exn> =
+    let publishCoffeeEvent: DomainEvent<Coffee, Coffee.Event> -> Result<unit, exn> =
         publishEvent "domain.events.coffee" encodeCoffeeEvent
 
-    let publishCustomerEvent: DomainEvent<Customer.Customer, Customer.Event> -> Result<unit, exn> =
+    let publishCustomerEvent: DomainEvent<Customer, Customer.Event> -> Result<unit, exn> =
         publishEvent "domain.events.customer" encodeCustomerEvent

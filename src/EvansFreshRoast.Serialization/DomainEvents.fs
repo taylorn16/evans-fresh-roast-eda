@@ -1,7 +1,7 @@
 namespace EvansFreshRoast.Serialization
 
 open Thoth.Json.Net
-open EvansFreshRoast.Domain.Aggregate
+open EvansFreshRoast.Framework
 open EvansFreshRoast.Serialization.Common
 
 module DomainEvents =

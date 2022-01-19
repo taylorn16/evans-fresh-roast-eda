@@ -20,5 +20,6 @@
     <ProjectReference Include="..\Utils\Utils.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Serialization\EvansFreshRoast.Serialization.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
   </ItemGroup>
 </Project>

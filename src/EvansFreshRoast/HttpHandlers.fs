@@ -9,8 +9,8 @@ module HttpHandlers =
     open EvansFreshRoast.EventStore.Roast
     open EvansFreshRoast.EventStore.Coffee
     open EvansFreshRoast.EventStore.Customer
-    open EvansFreshRoast.Domain.BaseTypes
-    open EvansFreshRoast.Domain.DomainTypes
+    open EvansFreshRoast.Domain
+    open EvansFreshRoast.Framework
     open EvansFreshRoast.Utils
 
     let eventStoreConnectionString =
@@ -31,7 +31,7 @@ module HttpHandlers =
             | Error b -> Error b
         | None -> Ok None
 
-    let toDomainValue (f: 'a -> Result<'b, DomainError>) (rawValue: 'a) =
+    let toDomainValue (f: 'a -> Result<'b, ConstrainedTypeError<DomainValidationError>>) (rawValue: 'a) =
         rawValue
         |> Option.ofObj
         |> Option.map f
@@ -46,7 +46,7 @@ module HttpHandlers =
             let price = dto.PricePerBag |> UsdPrice.create |> Result.map Some
             let weight = dto.WeightPerBag |> OzWeight.create |> Result.map Some
 
-            let buildUpdateFields nm desc pr wt: Coffee.CoffeeUpdateFields =
+            let buildUpdateFields nm desc pr wt: CoffeeUpdateFields =
                 { Name = nm
                   Description = desc
                   PricePerBag = pr
@@ -138,7 +138,7 @@ module HttpHandlers =
 
             let buildUpdateFields nm phn =
                 { Name = nm
-                  PhoneNumber = phn }: Customer.CustomerUpdateFields
+                  PhoneNumber = phn }: CustomerUpdateFields
 
             let name = dto.Name |> toDomainValue CustomerName.create
             let phoneNumber = dto.PhoneNumber |> toDomainValue UsPhoneNumber.create

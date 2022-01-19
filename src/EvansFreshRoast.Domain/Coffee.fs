@@ -1,8 +1,7 @@
-module EvansFreshRoast.Domain.Coffee
+namespace EvansFreshRoast.Domain
 
-open EvansFreshRoast.Domain.DomainTypes
 open EvansFreshRoast.Utils
-open EvansFreshRoast.Domain.Aggregate
+open EvansFreshRoast.Framework
 
 type Coffee =
     { Name: CoffeeName
@@ -23,66 +22,67 @@ type CoffeeUpdateFields =
       PricePerBag: UsdPrice option
       WeightPerBag: OzWeight option }
 
-type Event =
-    | Updated of CoffeeUpdateFields
-    | Activated
-    | Deactivated
+module Coffee =
+    type Event =
+        | Updated of CoffeeUpdateFields
+        | Activated
+        | Deactivated
 
-type Command =
-    | Update of CoffeeUpdateFields
-    | Activate
-    | Deactivate
+    type Command =
+        | Update of CoffeeUpdateFields
+        | Activate
+        | Deactivate
 
-type Error = | NoUpdateFieldsSupplied
+    type Error = | NoUpdateFieldsSupplied
 
-let execute (_: Coffee) cmd =
-    match cmd with
-    | Update fields ->
-        let hasAtLeastOneField =
-            [ fields.Name |> Option.isSome
-              fields.Description |> Option.isSome
-              fields.PricePerBag |> Option.isSome
-              fields.WeightPerBag |> Option.isSome ]
-            |> Seq.exists ((=) true)
+    let execute (_: Coffee) cmd =
+        match cmd with
+        | Update fields ->
+            let hasAtLeastOneField =
+                [ fields.Name |> Option.isSome
+                  fields.Description |> Option.isSome
+                  fields.PricePerBag |> Option.isSome
+                  fields.WeightPerBag |> Option.isSome ]
+                |> Seq.exists ((=) true)
 
-        if hasAtLeastOneField then
-            Ok <| Updated fields
-        else
-            Error NoUpdateFieldsSupplied
+            if hasAtLeastOneField then
+                Ok <| Updated fields
+            else
+                Error NoUpdateFieldsSupplied
 
-    | Activate -> Ok Activated
+        | Activate -> Ok Activated
 
-    | Deactivate -> Ok Deactivated
+        | Deactivate -> Ok Deactivated
 
-let apply (coffee: Coffee) event =
-    match event with
-    | Updated fields ->
-        let name =
-            fields.Name |> Option.defaultValue coffee.Name
+    let apply (coffee: Coffee) event =
+        match event with
+        | Updated fields ->
+            let name =
+                fields.Name |> Option.defaultValue coffee.Name
 
-        let description =
-            fields.Description
-            |> Option.defaultValue coffee.Description
+            let description =
+                fields.Description
+                |> Option.defaultValue coffee.Description
 
-        let price =
-            fields.PricePerBag
-            |> Option.defaultValue coffee.PricePerBag
+            let price =
+                fields.PricePerBag
+                |> Option.defaultValue coffee.PricePerBag
 
-        let weight =
-            fields.WeightPerBag
-            |> Option.defaultValue coffee.WeightPerBag
+            let weight =
+                fields.WeightPerBag
+                |> Option.defaultValue coffee.WeightPerBag
 
-        { coffee with
-            Name = name
-            Description = description
-            PricePerBag = price
-            WeightPerBag = weight }
+            { coffee with
+                Name = name
+                Description = description
+                PricePerBag = price
+                WeightPerBag = weight }
 
-    | Activated -> { coffee with Status = Active }
+        | Activated -> { coffee with Status = Active }
 
-    | Deactivated -> { coffee with Status = Inactive }
+        | Deactivated -> { coffee with Status = Inactive }
 
-let aggregate =
-    { Execute = execute
-      Apply = apply
-      Empty = Coffee.Empty }
+    let aggregate =
+        { Execute = execute
+          Apply = apply
+          Empty = Coffee.Empty }

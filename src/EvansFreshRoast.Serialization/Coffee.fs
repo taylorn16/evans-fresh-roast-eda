@@ -1,20 +1,21 @@
 module EvansFreshRoast.Serialization.Coffee
 
 open Thoth.Json.Net
+open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Coffee
-open EvansFreshRoast.Domain.DomainTypes
 
 let encodeCoffeeEvent event =
     match event with
     | Updated fields ->
-        Encode.object [ if fields.Name.IsSome then
-                            "name", Encode.string (CoffeeName.value fields.Name.Value)
-                        if fields.Description.IsSome then
-                            "description", Encode.string (CoffeeDescription.value fields.Description.Value)
-                        if fields.PricePerBag.IsSome then
-                            "pricePerBag", Encode.decimal (UsdPrice.value fields.PricePerBag.Value)
-                        if fields.WeightPerBag.IsSome then
-                            "weightPerBag", Encode.decimal (OzWeight.value fields.WeightPerBag.Value) ]
+        Encode.object
+            [ if fields.Name.IsSome then
+                  "name", Encode.string (CoffeeName.value fields.Name.Value)
+              if fields.Description.IsSome then
+                  "description", Encode.string (CoffeeDescription.value fields.Description.Value)
+              if fields.PricePerBag.IsSome then
+                  "pricePerBag", Encode.decimal (UsdPrice.value fields.PricePerBag.Value)
+              if fields.WeightPerBag.IsSome then
+                  "weightPerBag", Encode.decimal (OzWeight.value fields.WeightPerBag.Value) ]
 
     | Activated -> Encode.string "activated"
 

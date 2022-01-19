@@ -2,9 +2,8 @@
 
 open Npgsql.FSharp
 open EvansFreshRoast.Domain.Customer
-open EvansFreshRoast.Domain.Aggregate
-open EvansFreshRoast.Domain.BaseTypes
-open EvansFreshRoast.Domain.DomainTypes
+open EvansFreshRoast.Framework
+open EvansFreshRoast.Domain
 open EvansFreshRoast.Utils
 
 module Customer =

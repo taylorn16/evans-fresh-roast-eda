@@ -28,6 +28,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EvansFreshRoast.EventStore"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EvansFreshRoast.ReadModels", "src\EvansFreshRoast.ReadModels\EvansFreshRoast.ReadModels.fsproj", "{2B1BE4A4-B671-414B-8546-C7C504A85872}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EvansFreshRoast.Framework", "src\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj", "{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,6 +50,7 @@ Global
 		{C288EBC4-1DE1-46B3-82CF-9F2BA5358588} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
 		{9F92A0F6-1CBE-483D-BBBD-4E79B39B105C} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
 		{2B1BE4A4-B671-414B-8546-C7C504A85872} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{C56E75B2-5671-46E1-8594-6529135E7082}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -134,5 +137,17 @@ Global
 		{2B1BE4A4-B671-414B-8546-C7C504A85872}.Release|x64.Build.0 = Release|Any CPU
 		{2B1BE4A4-B671-414B-8546-C7C504A85872}.Release|x86.ActiveCfg = Release|Any CPU
 		{2B1BE4A4-B671-414B-8546-C7C504A85872}.Release|x86.Build.0 = Release|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Debug|x64.Build.0 = Debug|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Debug|x86.Build.0 = Debug|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x64.ActiveCfg = Release|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x64.Build.0 = Release|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x86.ActiveCfg = Release|Any CPU
+		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

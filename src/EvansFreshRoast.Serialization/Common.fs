@@ -2,7 +2,7 @@ module EvansFreshRoast.Serialization.Common
 
 open NodaTime
 open Thoth.Json.Net
-open EvansFreshRoast.Domain.BaseTypes
+open EvansFreshRoast.Framework
 open System.Text.RegularExpressions
 
 let encodeLocalDate (localDate: LocalDate) =
