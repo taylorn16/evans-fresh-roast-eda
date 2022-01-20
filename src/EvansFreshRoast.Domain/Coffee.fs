@@ -3,6 +3,61 @@ namespace EvansFreshRoast.Domain
 open EvansFreshRoast.Utils
 open EvansFreshRoast.Framework
 
+type CoffeeDescription = private CoffeeDescription of String200
+
+module CoffeeDescription =
+    let create desc =
+        String200.create desc
+        |> Result.map CoffeeDescription
+
+    let apply f (CoffeeDescription s) = s |> String200.apply f
+
+    let value = apply id
+
+type CoffeeName = CoffeeName of String100
+
+module CoffeeName =
+    let create desc =
+        String100.create desc |> Result.map CoffeeName
+
+    let apply f (CoffeeName s) = s |> String100.apply f
+
+    let value = apply id
+
+type CoffeeStatus =
+    | Active
+    | Inactive
+
+type UsdPrice = private UsdPrice of decimal
+
+module UsdPrice =
+    let create price =
+        match price with
+        | p when p < 0m -> Error <| DomainTypeError PriceIsNegative
+        | p when p > 1000m -> Error <| DomainTypeError PriceExceeds1000
+        | _ -> Ok(UsdPrice price)
+
+    let apply f (UsdPrice price) = f price
+
+    let value = apply id
+
+    let zero = UsdPrice 0m
+
+type OzWeight = private OzWeight of decimal
+
+module OzWeight =
+    let create ounces =
+        match ounces with
+        | oz when oz < 0m -> Error <| DomainTypeError WeightIsNegative
+        | oz when oz > 800m -> Error <| DomainTypeError WeightExceeds50
+        | _ -> Ok(OzWeight ounces)
+
+    let apply f (OzWeight oz) = f oz
+
+    let value = apply id
+
+    let zero = OzWeight 0m
+
 type Coffee =
     { Name: CoffeeName
       Description: CoffeeDescription
@@ -11,7 +66,10 @@ type Coffee =
       Status: CoffeeStatus }
     static member Empty =
         { Name = "<empty>" |> CoffeeName.create |> unsafeAssertOk
-          Description = "<empty>" |> CoffeeDescription.create |> unsafeAssertOk
+          Description =
+            "<empty>"
+            |> CoffeeDescription.create
+            |> unsafeAssertOk
           PricePerBag = UsdPrice.zero
           WeightPerBag = OzWeight.zero
           Status = Inactive }

@@ -23,4 +23,4 @@ type CustomerReadModelConsumer(logger: ILogger<CustomerReadModelConsumer>) =
         "Host=localhost;Port=2345;Database=evans_fresh_roast_reads;Username=read_models_user;Password=read_models_pass;"
         |> ConnectionString.create
 
-    override _.handleEvent event = Customer.updateReadModel connectionString event
+    override _.handleEvent event = CustomerRepository.updateCustomer connectionString event

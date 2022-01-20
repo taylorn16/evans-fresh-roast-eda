@@ -6,18 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="CustomerRepository.fs" />
+    <Compile Include="Customer.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql.FSharp" Version="4.1.0" />
-    <PackageReference Include="Thoth.Json.Net" Version="7.1.0" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\Utils\Utils.fsproj" />
-    <ProjectReference Include="..\EvansFreshRoast.Serialization\EvansFreshRoast.Serialization.fsproj" />
   </ItemGroup>
 
 </Project>

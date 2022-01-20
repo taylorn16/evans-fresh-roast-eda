@@ -15,10 +15,6 @@ type Aggregate<'State, 'Command, 'Event, 'Error> =
       Apply: 'State -> 'Event -> 'State
       Execute: 'State -> 'Command -> Result<'Event, 'Error> }
 
-// type LoadEventsError<'a> = LoadEventsError of 'a
-
-// type SaveEventError<'a> = SaveEventError of 'a
-
 type AggregateHandlerError<'DomainError, 'LoadEventsError, 'SaveEventError> =
     | FailedToLoadEvents of 'LoadEventsError
     | DomainError of 'DomainError

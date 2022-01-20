@@ -4,6 +4,69 @@ open EvansFreshRoast.Framework
 open NodaTime
 open System.Collections.Generic
 open EvansFreshRoast.Utils
+open System.Text.RegularExpressions
+
+type UsdInvoiceAmount = private UsdInvoiceAmount of decimal
+
+module UsdInvoiceAmount =
+    let create amt =
+        match amt with
+        | a when a < 0m -> Error <| DomainTypeError InvoiceAmountIsNegative
+        | a when a > 1000m -> Error <| DomainTypeError InvoiceAmountExceeds1000
+        | _ -> Ok(UsdInvoiceAmount amt)
+
+    let apply f (UsdInvoiceAmount amt) = f amt
+
+    let value = apply id
+
+type Quantity = private Quantity of int
+
+module Quantity =
+    let create qty =
+        match qty with
+        | q when q < 0 -> Error <| DomainTypeError QuantityIsNegative
+        | q when q > 50 -> Error <| DomainTypeError QuantityExceeds50Bags
+        | _ -> Ok(Quantity qty)
+
+    let apply f (Quantity qty) = f qty
+
+    let value = apply id
+
+type CoffeeReferenceId = private CoffeeReferenceId of string
+
+module CoffeeReferenceId =
+    let create ref =
+        Regex.IsMatch(ref, "^[A-Z]$")
+        |> function
+            | true -> Ok <| CoffeeReferenceId ref
+            | false -> Error <| DomainTypeError ReferenceIdMustBeAtoZ
+
+    let apply f (CoffeeReferenceId ref) = f ref
+
+    let value = apply id
+
+type PaymentMethod =
+    | Unknown
+    | Venmo
+    | Cash
+    | Check
+
+type Invoice =
+    | PaidInvoice of UsdInvoiceAmount * PaymentMethod
+    | UnpaidInvoice of UsdInvoiceAmount
+
+type OrderLineItem =
+    { OrderReferenceId: CoffeeReferenceId
+      Quantity: Quantity }
+
+type OrderDetails =
+    { CustomerId: Id<Customer>
+      Timestamp: OffsetDateTime
+      LineItems: IDictionary<Id<Coffee>, Quantity> }
+
+type Order =
+    | UnconfirmedOrder of OrderDetails
+    | ConfirmedOrder of OrderDetails * Invoice
 
 type RoastStatus =
     | NotStarted
@@ -11,11 +74,11 @@ type RoastStatus =
     | Complete
 
 type Roast =
-    { Customers: Id<CustomerProjection> list
+    { Customers: Id<Customer> list
       RoastDate: LocalDate
       OrderByDate: LocalDate
       Orders: Order list
-      Coffees: IDictionary<CoffeeReferenceId, Id<CoffeeProjection>>
+      Coffees: IDictionary<CoffeeReferenceId, Id<Coffee>>
       Status: RoastStatus }
     static member Empty =
         { Customers = List.empty
@@ -28,20 +91,20 @@ type Roast =
 module Roast =
     type Event =
         | OrderPlaced of OrderDetails
-        | OrderCancelled of Id<CustomerProjection>
-        | OrderConfirmed of Id<CustomerProjection>
-        | CoffeesAdded of Id<CoffeeProjection> list
-        | CustomersAdded of Id<CustomerProjection> list
+        | OrderCancelled of Id<Customer>
+        | OrderConfirmed of Id<Customer>
+        | CoffeesAdded of Id<Coffee> list
+        | CustomersAdded of Id<Customer> list
         | RoastDatesChanged of roastDate: LocalDate * orderByDate: LocalDate
         | RoastStarted
         | RoastCompleted
 
     type Command =
-        | PlaceOrder of Id<CustomerProjection> * OrderLineItem list * OffsetDateTime
-        | CancelOrder of Id<CustomerProjection>
-        | ConfirmOrder of Id<CustomerProjection>
-        | AddCoffees of Id<CoffeeProjection> list
-        | AddCustomers of Id<CustomerProjection> list
+        | PlaceOrder of Id<Customer> * OrderLineItem list * OffsetDateTime
+        | CancelOrder of Id<Customer>
+        | ConfirmOrder of Id<Customer>
+        | AddCoffees of Id<Coffee> list
+        | AddCustomers of Id<Customer> list
         | UpdateRoastDates of roastDate: LocalDate * orderByDate: LocalDate
         | StartRoast
         | CompleteRoast
@@ -67,13 +130,13 @@ module Roast =
         | UnconfirmedOrder details -> details.CustomerId
         | ConfirmedOrder (details, _) -> details.CustomerId
 
-    let getInvoiceAmt (allCoffees: seq<CoffeeProjection>) { LineItems = lineItems } =
+    let getInvoiceAmt (allCoffees: seq<Id<Coffee> * Coffee>) { LineItems = lineItems } =
         lineItems
         |> Seq.sumBy (fun kvp ->
             let price =
                 allCoffees
-                |> Seq.find (fun coffee -> coffee.Id = kvp.Key)
-                |> fun coffee -> coffee.PricePerBag
+                |> Seq.find (fst >> (=) kvp.Key)
+                |> fun (_, coffee) -> coffee.PricePerBag
                 |> UsdPrice.value
 
             let qty = Quantity.value kvp.Value |> decimal
@@ -81,7 +144,13 @@ module Roast =
             price * qty)
         |> UsdInvoiceAmount.create
 
-    let execute (allCustomers: seq<CustomerProjection>) (allCoffees: seq<CoffeeProjection>) (today: LocalDate) roast cmd =
+    let execute
+        (allCustomers: seq<Id<Customer> * Customer>)
+        (allCoffees: seq<Id<Coffee> * Coffee>)
+        (today: LocalDate)
+        roast
+        cmd
+        =
         match cmd with
         | UpdateRoastDates (roastDate, orderByDate) ->
             if orderByDate >= roastDate then
@@ -142,9 +211,9 @@ module Roast =
                         |> List.groupBy (fun (coffeeId, _) -> coffeeId)
                         |> List.map (fun (coffeeId, quantities) ->
                             (coffeeId,
-                            quantities
-                            |> List.sumBy (fun (_, qty) -> Quantity.value qty)
-                            |> Quantity.create))
+                             quantities
+                             |> List.sumBy (fun (_, qty) -> Quantity.value qty)
+                             |> Quantity.create))
 
                     let isError =
                         function
@@ -184,8 +253,8 @@ module Roast =
         | AddCoffees coffeeIds ->
             let validCoffeeIds =
                 allCoffees
-                |> Seq.filter (fun coffee -> coffeeIds |> Seq.exists ((=) coffee.Id))
-                |> Seq.map (fun coffee -> coffee.Id)
+                |> Seq.filter (fun (id, _) -> coffeeIds |> Seq.exists ((=) id))
+                |> Seq.map fst
                 |> Seq.except roast.Coffees.Values
                 |> Seq.toList
 
@@ -217,8 +286,8 @@ module Roast =
         | AddCustomers customerIds ->
             let validCustomerIds =
                 allCustomers
-                |> Seq.filter (fun cust -> customerIds |> Seq.exists ((=) cust.Id))
-                |> Seq.map (fun cust -> cust.Id)
+                |> Seq.filter (fun (id, _) -> customerIds |> Seq.exists ((=) id))
+                |> Seq.map fst
                 |> Seq.except roast.Customers
                 |> Seq.toList
 
@@ -236,7 +305,7 @@ module Roast =
             | NotStarted -> Error RoastNotYetStarted
             | Complete -> Error RoastAlreadyCompleted
 
-    let apply (allCoffees: seq<CoffeeProjection>) roast event =
+    let apply (allCoffees: seq<Id<Coffee> * Coffee>) roast event =
         match event with
         | OrderPlaced details -> { roast with Roast.Orders = UnconfirmedOrder details :: roast.Orders }
 
@@ -314,8 +383,8 @@ module Roast =
           Apply = apply allCoffees
           Execute = execute allCustomers allCoffees today }
 
-    let getOfferedCoffeeSummary (allCoffees: seq<CoffeeProjection>) roast =
-        let getSummary (referenceId, (coffee: CoffeeProjection)) =
+    let getOfferedCoffeeSummary (allCoffees: seq<Id<Coffee> * Coffee>) roast =
+        let getSummary (referenceId, (_, coffee: Coffee)) =
             let name = CoffeeName.value coffee.Name
             let price = UsdPrice.value coffee.PricePerBag
             let weight = OzWeight.value coffee.WeightPerBag
@@ -328,10 +397,7 @@ module Roast =
         roast.Coffees
         |> Seq.sortBy (fun kvp -> CoffeeReferenceId.value kvp.Key)
         |> Seq.map (
-            (fun kvp ->
-                (kvp.Key,
-                allCoffees
-                |> Seq.find ((fun c -> c.Id) >> ((=) kvp.Value))))
+            (fun kvp -> kvp.Key, allCoffees |> Seq.find (fst >> ((=) kvp.Value)))
             >> getSummary
         )
         |> Seq.fold (fun a b -> a + b + "\n") ""

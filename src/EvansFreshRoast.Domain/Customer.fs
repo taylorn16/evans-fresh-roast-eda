@@ -2,6 +2,47 @@ namespace EvansFreshRoast.Domain
 
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Utils
+open System.Text.RegularExpressions
+
+type CustomerName = private CustomerName of String100
+
+module CustomerName =
+    let create desc =
+        String100.create desc |> Result.map CustomerName
+
+    let apply f (CustomerName s) = s |> String100.apply f
+
+    let value = apply id
+
+type CustomerStatus =
+    | Unconfirmed
+    | Subscribed
+    | Unsubscribed
+
+type UsPhoneNumber = private UsPhoneNumber of string
+
+module UsPhoneNumber =
+    let create phn =
+        Regex.Replace(phn, "\D", "").Trim()
+        |> fun s -> (s, String.length s)
+        |> function
+            | (s, 11) -> Ok <| s.Substring(1)
+            | (s, 10) -> Ok s
+            | _ ->
+                Error
+                <| DomainTypeError PhoneNumberFormatIsInvalid
+
+        |> Result.map UsPhoneNumber
+
+    let apply f (UsPhoneNumber phn) = f phn
+
+    let value = apply id
+
+    let format phn =
+        let fmt (s: string) =
+            sprintf "(%s) %s-%s" (s.Substring(0, 3)) (s.Substring(3, 3)) (s.Substring(6, 4))
+
+        phn |> apply fmt
 
 type Customer =
     { Name: CustomerName
@@ -9,7 +50,10 @@ type Customer =
       Status: CustomerStatus }
     static member Empty =
         { Name = "<empty>" |> CustomerName.create |> unsafeAssertOk
-          PhoneNumber = "0000000000" |> UsPhoneNumber.create |> unsafeAssertOk
+          PhoneNumber =
+            "0000000000"
+            |> UsPhoneNumber.create
+            |> unsafeAssertOk
           Status = Unconfirmed }
 
 type CustomerCreateFields =
@@ -78,11 +122,9 @@ module Customer =
                 Name = name
                 PhoneNumber = phone }
 
-        | Subscribed ->
-            { customer with Status = CustomerStatus.Subscribed }
+        | Subscribed -> { customer with Status = CustomerStatus.Subscribed }
 
-        | Unsubscribed ->
-            { customer with Status = CustomerStatus.Unsubscribed }
+        | Unsubscribed -> { customer with Status = CustomerStatus.Unsubscribed }
 
     let aggregate =
         { Execute = execute

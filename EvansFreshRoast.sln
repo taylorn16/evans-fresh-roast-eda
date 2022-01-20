@@ -30,6 +30,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EvansFreshRoast.ReadModels"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EvansFreshRoast.Framework", "src\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj", "{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EvansFreshRoast.Sms", "src\EvansFreshRoast.Sms\EvansFreshRoast.Sms.fsproj", "{2C2F4512-E90A-4896-A3F5-B631B206984C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,7 @@ Global
 		{9F92A0F6-1CBE-483D-BBBD-4E79B39B105C} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
 		{2B1BE4A4-B671-414B-8546-C7C504A85872} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
 		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
+		{2C2F4512-E90A-4896-A3F5-B631B206984C} = {B8CB57F5-C87C-48A1-A3DC-BF5BBA95EB25}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{C56E75B2-5671-46E1-8594-6529135E7082}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -149,5 +152,17 @@ Global
 		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x64.Build.0 = Release|Any CPU
 		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x86.ActiveCfg = Release|Any CPU
 		{461CA2CF-7B27-4FAD-AE66-B6B2715A4ED7}.Release|x86.Build.0 = Release|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Debug|x64.Build.0 = Debug|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Debug|x86.Build.0 = Debug|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Release|x64.ActiveCfg = Release|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Release|x64.Build.0 = Release|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Release|x86.ActiveCfg = Release|Any CPU
+		{2C2F4512-E90A-4896-A3F5-B631B206984C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

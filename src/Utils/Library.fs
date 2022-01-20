@@ -12,6 +12,11 @@ module Result =
         | Some a -> Ok a
         | None -> Error noneValue
 
+    let isOk =
+        function
+        | Ok _ -> true
+        | Error _ -> false
+
     let unsafeAssertOk res =
         match res with
         | Ok a -> a
@@ -47,4 +52,9 @@ module Async =
         async {
             let! x = comp
             return f x
+        }
+
+    let lift x =
+        async {
+            return x
         }
