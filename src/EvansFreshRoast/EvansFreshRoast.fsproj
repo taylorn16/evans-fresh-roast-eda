@@ -12,12 +12,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Settings.fs" />
-    <Compile Include="Composition/Leaves/Customers/CustomerWorkflowDependencies.fs" />
+    <Compile Include="Composition/Types.fs" />
+    <Compile Include="Composition/Leaves/CustomerWorkflowDependencies.fs" />
+    <Compile Include="Composition/Leaves/CoffeeWorkflowDependencies.fs" />
     <Compile Include="Composition/CompositionRoot.fs" />
     <Compile Include="Models.fs" />
     <Compile Include="HttpHandlers.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
+    <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />
     <Compile Include="EventConsumers/Sms/CustomerSmsConsumer.fs" />
     <Compile Include="Program.fs" />
     <Content Include="appsettings.json">

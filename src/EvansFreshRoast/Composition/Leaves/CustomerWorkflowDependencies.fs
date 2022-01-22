@@ -7,8 +7,8 @@ open EvansFreshRoast.EventStore.Customer
 open EvansFreshRoast.ReadModels.CustomerRepository
 
 type CustomerWorkflowDependencies =
-    { LoadEvents: Id<Customer> -> Async<Result<DomainEvent<Customer, Event> list, CustomerEventStoreError>>
-      SaveEvent: DomainEvent<Customer, Event> -> Async<Result<unit, CustomerEventStoreError>>
+    { LoadEvents: Id<Customer> -> Async<Result<DomainEvent<Customer, Event> list, EventStoreError>>
+      SaveEvent: DomainEvent<Customer, Event> -> Async<Result<unit, EventStoreError>>
       GetCustomer: Id<Customer> -> Async<option<Id<Customer> * Customer>>
       GetAllCustomers: Async<list<Id<Customer> * Customer>> }
 

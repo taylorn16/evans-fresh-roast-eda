@@ -7,7 +7,7 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Roast
 open EvansFreshRoast.Utils
 
-type RoastEventStoreError =
+type EventStoreError =
     | DataError of EventStoreDbError
     | SerializationError of string
     | PublishingError of exn

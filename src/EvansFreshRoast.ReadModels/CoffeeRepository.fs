@@ -124,7 +124,7 @@ module CoffeeRepository =
             | s -> Decode.fail $"Expected one of 'Active' or 'Inactive' but got '{s}.'"
         )
 
-    let decodeCustomer: Decoder<Coffee> =
+    let decodeCoffee: Decoder<Coffee> =
         Decode.map5
             (fun nm desc ppb wpb st ->
                 { Name = nm
@@ -154,12 +154,43 @@ module CoffeeRepository =
             |> Sql.parameters [ "id", Sql.uuid <| Id.value coffeeId ]
             |> Sql.executeAsync (fun row ->
                 row.string "coffee_data"
-                |> Decode.fromString decodeCustomer)
+                |> Decode.fromString decodeCoffee)
             |> Async.AwaitTask
             |> Async.map (
                 List.take 1
                 >> List.tryHead
                 >> Option.bind Result.toOption
                 >> Option.map (fun coffee -> coffeeId, coffee)
+            )
+        }
+
+    let getAllCoffees connectionString =
+        let sql =
+            """
+            SELECT coffee_id, coffee_data
+            FROM coffees
+            """
+
+        async {
+            return! ConnectionString.value connectionString
+            |> Sql.connect
+            |> Sql.query sql
+            |> Sql.executeAsync (fun row ->
+                let tuple a b = a, b
+
+                let coffee = 
+                    row.string "coffee_data"
+                    |> Decode.fromString decodeCoffee
+                    
+                let id: Result<Id<Coffee>, string> =
+                    row.uuid "coffee_id"
+                    |> Id.create
+                    |> Result.mapError string
+                    
+                tuple <!> id <*> coffee)
+            |> Async.AwaitTask
+            |> Async.map (
+                List.filter isOk
+                >> List.map unsafeAssertOk
             )
         }

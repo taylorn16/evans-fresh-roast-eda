@@ -28,3 +28,11 @@ type CustomerDto =
     { Id: Guid
       Name: string
       PhoneNumber: string }
+
+[<CLIMutable>]
+type CoffeeDto =
+    { Id: Guid
+      Name: string
+      Description: string
+      PricePerBag: decimal
+      WeightPerBag: decimal }

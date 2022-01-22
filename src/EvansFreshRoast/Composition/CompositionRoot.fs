@@ -1,14 +1,19 @@
-namespace EvansFreshRoast
+namespace EvansFreshRoast.Composition
 
+open EvansFreshRoast
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.EventStore
 
 type CompositionRoot =
-    { LoadCustomerEvents: Id<Customer> -> Async<Result<DomainEvent<Customer, Customer.Event> list, Customer.CustomerEventStoreError>>
-      SaveCustomerEvent: DomainEvent<Customer, Customer.Event> -> Async<Result<unit, Customer.CustomerEventStoreError>>
-      GetCustomer: Id<Customer> -> Async<option<Id<Customer> * Customer>>
-      GetAllCustomers: Async<list<Id<Customer> * Customer>> }
+    { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, Customer.EventStoreError>
+      SaveCustomerEvent: SaveEvent<Customer, Customer.Event, Customer.EventStoreError>
+      GetCustomer: LoadAggregate<Customer>
+      GetAllCustomers: LoadAllAggregates<Customer>
+      LoadCoffeeEvents: LoadEvents<Coffee, Coffee.Event, Coffee.EventStoreError>
+      SaveCoffeeEvent: SaveEvent<Coffee, Coffee.Event, Coffee.EventStoreError>
+      GetCoffee: LoadAggregate<Coffee>
+      GetAllCoffees: LoadAllAggregates<Coffee> }
 
 module CompositionRoot =
     let compose (settings: Settings) =
@@ -19,11 +24,20 @@ module CompositionRoot =
             ConnectionString.create settings.ConnectionStrings.ReadStore
 
         let customersWorkflow =
-            Composition.Leaves.Customers.compose
+            Leaves.Customers.compose
+                eventStoreConnectionString
+                readStoreConnectionString
+
+        let coffeesWorkflow =
+            Leaves.Coffees.compose
                 eventStoreConnectionString
                 readStoreConnectionString
         
         { LoadCustomerEvents = customersWorkflow.LoadEvents
           SaveCustomerEvent = customersWorkflow.SaveEvent
           GetCustomer = customersWorkflow.GetCustomer
-          GetAllCustomers = customersWorkflow.GetAllCustomers }
+          GetAllCustomers = fun () -> customersWorkflow.GetAllCustomers
+          LoadCoffeeEvents = coffeesWorkflow.LoadEvents
+          SaveCoffeeEvent = coffeesWorkflow.SaveEvent
+          GetCoffee = coffeesWorkflow.GetCoffee
+          GetAllCoffees = fun () -> coffeesWorkflow.GetAllCoffees }

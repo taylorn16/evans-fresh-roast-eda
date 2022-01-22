@@ -15,6 +15,7 @@ open NodaTime
 open EvansFreshRoast.EventConsumers.ReadModels
 open EvansFreshRoast.EventConsumers.Sms
 open Microsoft.Extensions.Configuration
+open EvansFreshRoast.Composition
 
 // ---------------------------------
 // Web app
@@ -22,13 +23,16 @@ open Microsoft.Extensions.Configuration
 
 let webApp (compositionRoot: CompositionRoot) =
     choose [ subRoute "/api/v1"
-                 (choose [ GET  >=> choose [ route "/hello" >=> handleGetHello
-                                             routef "/customers/%O" (getCustomer compositionRoot)
-                                             route "/customers" >=> getCustomers compositionRoot ]
+                 (choose [ GET >=> choose [ route "/hello" >=> handleGetHello
+                                            routef "/customers/%O" (getCustomer compositionRoot)
+                                            route "/customers" >=> getCustomers compositionRoot
+                                            routef "/coffees/%O" (getCoffee compositionRoot)
+                                            route "/coffees" >=> getCoffees compositionRoot ]
                            POST >=> choose [ route "/roasts" >=> handlePostRoast
-                                             route "/coffees" >=> handlePostCoffee
-                                             routef "/coffees/%O/activate" handleActivateCoffee
-                                             route "/customers" >=> postCustomer compositionRoot ] ])
+                                             route "/customers" >=> postCustomer compositionRoot
+                                             route "/coffees" >=> postCoffee compositionRoot ]
+                           PUT >=> choose [ routef "/coffees/%O" (putCoffee compositionRoot)
+                                            routef "/coffees/%O/activate" activateCoffee ] ])
              setStatusCode 404 >=> text "Not Found" ]
 
 // ---------------------------------
@@ -68,6 +72,7 @@ let configureApp (compositionRoot: CompositionRoot) (app: IApplicationBuilder) =
 
 let configureServices (services: IServiceCollection) =
     services.AddHostedService<CustomerReadModelConsumer>() |> ignore
+    services.AddHostedService<CoffeeReadModelConsumer>() |> ignore
     services.AddHostedService<CustomerSmsConsumer>() |> ignore
     services.AddCors() |> ignore
     services.AddGiraffe() |> ignore
