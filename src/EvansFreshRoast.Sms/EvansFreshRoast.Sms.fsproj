@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Twilio.fs" />
     <Compile Include="Customer.fs" />
   </ItemGroup>
 
@@ -13,6 +14,10 @@
     <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\Utils\Utils.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Twilio" Version="5.70.0" />
   </ItemGroup>
 
 </Project>

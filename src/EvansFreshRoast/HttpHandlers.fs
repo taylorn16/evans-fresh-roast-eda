@@ -146,11 +146,46 @@ module HttpHandlers =
             | Error err -> return! ServerErrors.internalError (text $"{err}") next ctx
         }
 
-    let handlePostCustomer (next: HttpFunc) (ctx: HttpContext) =
+    let getCustomers (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
+        task {
+            let! customers = Async.StartAsTask(
+                compositionRoot.GetAllCustomers,
+                cancellationToken=ctx.RequestAborted)
+
+            let customerDtos =
+                customers
+                |> List.map (fun (id, cust) ->
+                    { Id = Id.value id
+                      Name = CustomerName.value cust.Name
+                      PhoneNumber = UsPhoneNumber.format cust.PhoneNumber })
+
+            return! Successful.OK customerDtos next ctx
+        }
+
+    let getCustomer (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpContext) =
+        task {
+            match compositionRoot.GetCustomer <!> (Id.create id) with
+            | Ok getCustomer ->
+                match! Async.StartAsTask(getCustomer, cancellationToken=ctx.RequestAborted) with
+                | Some (customerId, customer) ->
+                    let customerDto =
+                        { Id = Id.value customerId
+                          Name = CustomerName.value customer.Name
+                          PhoneNumber = UsPhoneNumber.format customer.PhoneNumber }
+
+                    return! Successful.OK customerDto next ctx
+                | None ->
+                    return! RequestErrors.NOT_FOUND "Customer not found" next ctx
+            
+            | Error e ->
+                return! RequestErrors.BAD_REQUEST e next ctx
+        }
+
+    let postCustomer (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
         task {
             let! dto = ctx.BindJsonAsync<CreateCustomerDto>()
 
-            let buildUpdateFields nm phn =
+            let buildCreateFields nm phn =
                 { Name = nm
                   PhoneNumber = phn }: CustomerCreateFields
 
@@ -160,17 +195,17 @@ module HttpHandlers =
             let handleCommand =
                 Aggregate.createHandler
                     Customer.aggregate
-                    (loadCustomerEvents eventStoreConnectionString)
-                    (saveCustomerEvent eventStoreConnectionString)
+                    compositionRoot.LoadCustomerEvents
+                    compositionRoot.SaveCustomerEvent
 
             let cmdResultAsync =
-                buildUpdateFields <!> name <*> phoneNumber
+                buildCreateFields <!> name <*> phoneNumber
                 |> Result.map Customer.Command.Create
                 |> Result.map (handleCommand <| Id.newId())
 
             match cmdResultAsync with
-            | Ok cmdResultAsync' ->
-                match! Async.StartAsTask(cmdResultAsync', cancellationToken=ctx.RequestAborted) with
+            | Ok resultAsync ->
+                match! Async.StartAsTask(resultAsync, cancellationToken=ctx.RequestAborted) with
                 | Ok evt ->
                     let responseText =
                         sprintf
@@ -181,7 +216,7 @@ module HttpHandlers =
                     return! Successful.accepted (text responseText) next ctx
                 | Error e ->
                     let responseText = sprintf "Handler error: %A" e
-                    return! ServerErrors.internalError (text responseText) next ctx 
+                    return! ServerErrors.internalError (text responseText) next ctx
             | Error e ->
                 let responseText = sprintf "Validation error: %A" e
                 return! ServerErrors.internalError (text responseText) next ctx

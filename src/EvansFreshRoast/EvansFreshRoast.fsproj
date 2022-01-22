@@ -8,18 +8,27 @@
     <PackageReference Include="Giraffe" Version="6.0.0-alpha-2" />
     <PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.2.2" />
+    <PackageReference Include="Twilio" Version="5.70.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Settings.fs" />
+    <Compile Include="Composition/Leaves/Customers/CustomerWorkflowDependencies.fs" />
+    <Compile Include="Composition/CompositionRoot.fs" />
     <Compile Include="Models.fs" />
     <Compile Include="HttpHandlers.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
+    <Compile Include="EventConsumers/Sms/CustomerSmsConsumer.fs" />
     <Compile Include="Program.fs" />
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.EventStore\EvansFreshRoast.EventStore.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.ReadModels\EvansFreshRoast.ReadModels.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Sms\EvansFreshRoast.Sms.fsproj" />
   </ItemGroup>
 </Project>

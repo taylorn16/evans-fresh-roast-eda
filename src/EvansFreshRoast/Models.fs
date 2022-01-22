@@ -1,6 +1,7 @@
 namespace EvansFreshRoast.Models
 
 open NodaTime
+open System
 
 [<CLIMutable>]
 type Message = { Text: string }
@@ -20,4 +21,10 @@ type CreateCoffeeDto =
 [<CLIMutable>]
 type CreateCustomerDto =
     { Name: string
+      PhoneNumber: string }
+
+[<CLIMutable>]
+type CustomerDto =
+    { Id: Guid
+      Name: string
       PhoneNumber: string }

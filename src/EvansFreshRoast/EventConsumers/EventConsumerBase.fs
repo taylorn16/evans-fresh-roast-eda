@@ -60,19 +60,21 @@ type EventConsumerBase<'State, 'Event>
                                 Decode.fromString decoder >> (Result.mapError DeserializationError)
                             )
 
+                        let ack () = channel.BasicAck(queueMsg.DeliveryTag, false)
+
                         match domainEvent with
                         | Ok evt ->
                             match! this.handleEvent evt with
                             | Ok () ->
-                                channel.BasicAck(queueMsg.DeliveryTag, false)
+                                ack()
                                 return ()
                             | Error e ->
-                                logger.LogError(e) // error updating read model in db
-                                channel.BasicAck(queueMsg.DeliveryTag, false)
+                                logger.LogError(e)
+                                ack()
                                 return ()
                         | Error (DeserializationError e) ->
                             logger.LogError(e)
-                            channel.BasicAck(queueMsg.DeliveryTag, false)
+                            ack()
                             return () // error deserializing event
                         | _ -> return () // no message
                 }

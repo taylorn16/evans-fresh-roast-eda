@@ -13,18 +13,22 @@ open System.Text.Json
 open NodaTime.Serialization.SystemTextJson
 open NodaTime
 open EvansFreshRoast.EventConsumers.ReadModels
+open EvansFreshRoast.EventConsumers.Sms
+open Microsoft.Extensions.Configuration
 
 // ---------------------------------
 // Web app
 // ---------------------------------
 
-let webApp =
+let webApp (compositionRoot: CompositionRoot) =
     choose [ subRoute "/api/v1"
-                 (choose [ GET  >=> choose [ route "/hello" >=> handleGetHello ]
+                 (choose [ GET  >=> choose [ route "/hello" >=> handleGetHello
+                                             routef "/customers/%O" (getCustomer compositionRoot)
+                                             route "/customers" >=> getCustomers compositionRoot ]
                            POST >=> choose [ route "/roasts" >=> handlePostRoast
                                              route "/coffees" >=> handlePostCoffee
                                              routef "/coffees/%O/activate" handleActivateCoffee
-                                             route "/customers" >=> handlePostCustomer ] ])
+                                             route "/customers" >=> postCustomer compositionRoot ] ])
              setStatusCode 404 >=> text "Not Found" ]
 
 // ---------------------------------
@@ -49,7 +53,7 @@ let configureCors (builder: CorsPolicyBuilder) =
         .AllowAnyHeader()
     |> ignore
 
-let configureApp (app: IApplicationBuilder) =
+let configureApp (compositionRoot: CompositionRoot) (app: IApplicationBuilder) =
     let env =
         app.ApplicationServices.GetService<IWebHostEnvironment>()
 
@@ -60,10 +64,11 @@ let configureApp (app: IApplicationBuilder) =
              .UseGiraffeErrorHandler(errorHandler)
              .UseHttpsRedirection())
         .UseCors(configureCors)
-        .UseGiraffe(webApp)
+        .UseGiraffe(webApp compositionRoot)
 
 let configureServices (services: IServiceCollection) =
     services.AddHostedService<CustomerReadModelConsumer>() |> ignore
+    services.AddHostedService<CustomerSmsConsumer>() |> ignore
     services.AddCors() |> ignore
     services.AddGiraffe() |> ignore
 
@@ -81,13 +86,22 @@ let configureServices (services: IServiceCollection) =
 let configureLogging (builder: ILoggingBuilder) =
     builder.AddConsole().AddDebug() |> ignore
 
+let configureSettings (configurationBuilder: IConfigurationBuilder) =
+    configurationBuilder
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional=false)
+
 [<EntryPoint>]
 let main args =
+    let confBuilder = configureSettings <| ConfigurationBuilder()
+    let settings = confBuilder.Build().Get<Settings>()
+    let compositionRoot = CompositionRoot.compose settings
+
     Host
         .CreateDefaultBuilder(args)
         .ConfigureWebHostDefaults(fun webHostBuilder ->
             webHostBuilder
-                .Configure(Action<IApplicationBuilder> configureApp)
+                .Configure(Action<IApplicationBuilder> (configureApp compositionRoot))
                 .ConfigureServices(Action<IServiceCollection> configureServices)
                 .ConfigureLogging(configureLogging)
             |> ignore)
