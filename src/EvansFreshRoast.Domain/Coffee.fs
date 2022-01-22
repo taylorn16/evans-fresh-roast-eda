@@ -74,27 +74,42 @@ type Coffee =
           WeightPerBag = OzWeight.zero
           Status = Inactive }
 
-type CoffeeUpdateFields =
+type CoffeeUpdated =
     { Name: CoffeeName option
       Description: CoffeeDescription option
       PricePerBag: UsdPrice option
       WeightPerBag: OzWeight option }
 
+type CoffeeCreated =
+    { Name: CoffeeName
+      Description: CoffeeDescription
+      PricePerBag: UsdPrice
+      WeightPerBag: OzWeight }
+
 module Coffee =
     type Event =
-        | Updated of CoffeeUpdateFields
+        | Created of CoffeeCreated
+        | Updated of CoffeeUpdated
         | Activated
         | Deactivated
 
     type Command =
-        | Update of CoffeeUpdateFields
+        | Create of CoffeeCreated
+        | Update of CoffeeUpdated
         | Activate
         | Deactivate
 
-    type Error = | NoUpdateFieldsSupplied
+    type Error =
+        | CoffeeAlreadyCreated
+        | NoUpdateFieldsSupplied
 
-    let execute (_: Coffee) cmd =
+    let execute (state: Coffee) cmd =
         match cmd with
+        | Create fields ->
+            if state <> Coffee.Empty then
+                Error CoffeeAlreadyCreated
+            else
+                Ok <| Created fields
         | Update fields ->
             let hasAtLeastOneField =
                 [ fields.Name |> Option.isSome
@@ -114,6 +129,13 @@ module Coffee =
 
     let apply (coffee: Coffee) event =
         match event with
+        | Created fields ->
+            { coffee with
+                Name = fields.Name
+                Description = fields.Description
+                PricePerBag = fields.PricePerBag
+                WeightPerBag = fields.WeightPerBag }
+                
         | Updated fields ->
             let name =
                 fields.Name |> Option.defaultValue coffee.Name

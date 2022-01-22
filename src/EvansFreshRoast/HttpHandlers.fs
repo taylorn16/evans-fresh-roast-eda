@@ -60,7 +60,7 @@ module HttpHandlers =
             let price = dto.PricePerBag |>  UsdPrice.create |> Result.map Some
             let weight = dto.WeightPerBag |> OzWeight.create |> Result.map Some
 
-            let buildUpdateFields nm desc pr wt: CoffeeUpdateFields =
+            let buildUpdateFields nm desc pr wt: CoffeeUpdated =
                 { Name = nm
                   Description = desc
                   PricePerBag = pr

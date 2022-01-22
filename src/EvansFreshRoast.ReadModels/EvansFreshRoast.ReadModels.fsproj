@@ -6,7 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Helpers.fs" />
     <Compile Include="CustomerRepository.fs" />
+    <Compile Include="CoffeeRepository.fs" />
   </ItemGroup>
 
   <ItemGroup>

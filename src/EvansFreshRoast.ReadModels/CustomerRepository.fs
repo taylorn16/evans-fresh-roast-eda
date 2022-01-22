@@ -24,16 +24,17 @@ module CustomerRepository =
 
             let sql =
                 """
-                INSERT INTO customers_read (id, view)
-                VALUES (@id, @view)
+                INSERT INTO customers (customer_id, customer_data)
+                VALUES (@id, @data)
                 """
+                
             async {
                 try
                     return! connection
                     |> Sql.query sql
                     |> Sql.parameters
                         [ "id", eventUuid
-                          "view", Sql.jsonb json ]
+                          "data", Sql.jsonb json ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.Ignore
@@ -43,30 +44,21 @@ module CustomerRepository =
             }
 
         | Updated fields ->
-            let rec generateRecursiveJsonbSet column (pathValues: (string * string) list) =
-                match pathValues with
-                | [] ->
-                    ""
-                | [(path, value)] ->
-                    $"jsonb_set({column}, '{{{path}}}', '{value}', true)"
-                | (path, value)::rest ->
-                    $"jsonb_set({generateRecursiveJsonbSet column rest}, '{{{path}}}', '{value}', true)"
-
             let jsonbSet =
                 [ if fields.Name.IsSome then
-                    "name", $"\"{CustomerName.value fields.Name.Value}\""
+                    "name", Encode.string <| CustomerName.value fields.Name.Value
                   if fields.PhoneNumber.IsSome then
-                    "phoneNumber", $"\"{UsPhoneNumber.value fields.PhoneNumber.Value}\"" ]
-                |> generateRecursiveJsonbSet "view"
+                    "phoneNumber", Encode.string <| UsPhoneNumber.value fields.PhoneNumber.Value ]
+                |> Helpers.generateRecursiveJsonbSet "customer_data"
             
             async {
                 try
                     return! connection
                     |> Sql.query
                         $"""
-                        UPDATE customers_read
-                        SET view = {jsonbSet}
-                        WHERE id = @id
+                        UPDATE customers
+                        SET customer_data = {jsonbSet}
+                        WHERE customer_id = @id
                         """
                     |> Sql.parameters [ "id", eventUuid ]
                     |> Sql.executeNonQueryAsync
@@ -74,7 +66,7 @@ module CustomerRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ -> return Error "Error updating customer read model row (name, phoneNumber)."
+                | _ -> return Error "Error updating customer read model row (name?, phoneNumber?)."
             }
         
         | Event.Subscribed ->
@@ -83,9 +75,9 @@ module CustomerRepository =
                     return! connection
                     |> Sql.query
                         """
-                        UPDATE customers_read
-                        SET view = jsonb_set(view, '{status}', '"Subscribed"', true)
-                        WHERE id = @id
+                        UPDATE customers
+                        SET customer_data = jsonb_set(customer_data, '{status}', '"Subscribed"', true)
+                        WHERE customer_id = @id
                         """
                     |> Sql.parameters [ "id", eventUuid ]
                     |> Sql.executeNonQueryAsync
@@ -103,9 +95,9 @@ module CustomerRepository =
                     return! connection
                     |> Sql.query
                         """
-                        UPDATE customers_read
-                        SET view = jsonb_set(view, '{status}', '"Unsubscribed"', true)
-                        WHERE id = @id
+                        UPDATE customers
+                        SET customer_data = jsonb_set(customer_data, '{status}', '"Unsubscribed"', true)
+                        WHERE customer_id = @id
                         """
                     |> Sql.parameters [ "id", eventUuid ]
                     |> Sql.executeNonQueryAsync
@@ -140,11 +132,9 @@ module CustomerRepository =
     let getCustomer connectionString (customerId: Id<Customer>) =
         let sql =
             """
-            SELECT
-                id
-              , view
-            FROM customers_read
-            WHERE id = @id
+            SELECT customer_id, customer_data
+            FROM customers
+            WHERE customer_id = @id
             LIMIT 1
             """
 
@@ -154,7 +144,7 @@ module CustomerRepository =
             |> Sql.query sql
             |> Sql.parameters [ "id", Sql.uuid <| Id.value customerId ]
             |> Sql.executeAsync (fun row ->
-                row.string "view"
+                row.string "customer_data"
                 |> Decode.fromString decodeCustomer)
             |> Async.AwaitTask
             |> Async.map (
@@ -168,10 +158,8 @@ module CustomerRepository =
     let getAllCustomers connectionString =
         let sql =
             """
-            SELECT
-                id
-              , view
-            FROM customers_read
+            SELECT customer_id, cusomter_data
+            FROM customers
             """
 
         async {
@@ -182,11 +170,11 @@ module CustomerRepository =
                 let tuple a b = a, b
 
                 let customer = 
-                    row.string "view"
+                    row.string "customer_data"
                     |> Decode.fromString decodeCustomer
                     
                 let id: Result<Id<Customer>, string> =
-                    row.uuid "id"
+                    row.uuid "customer_id"
                     |> Id.create
                     |> Result.mapError string
                     

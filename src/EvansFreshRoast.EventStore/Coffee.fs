@@ -18,6 +18,7 @@ let loadCoffeeEvents connectionString =
 let saveCoffeeEvent connectionString (event: DomainEvent<Coffee, Event>) =
     let getEventName =
         function
+        | Created _ -> "Coffee Created"
         | Updated _ -> "Coffee Updated"
         | Activated _ -> "Coffee Activated"
         | Deactivated _ -> "Coffee Deactivated"
