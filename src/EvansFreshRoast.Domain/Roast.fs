@@ -99,6 +99,11 @@ type Roast =
           Coffees = dict List.empty
           Status = NotStarted }
 
+type RoastCreated =
+    { Name: RoastName
+      RoastDate: LocalDate
+      OrderByDate: LocalDate }
+
 module Roast =
     type Event =
         | OrderPlaced of OrderDetails
@@ -109,6 +114,7 @@ module Roast =
         | RoastDatesChanged of roastDate: LocalDate * orderByDate: LocalDate
         | RoastStarted
         | RoastCompleted
+        | Created of RoastCreated
 
     type Command =
         | PlaceOrder of Id<Customer> * OrderLineItem list * OffsetDateTime
@@ -119,6 +125,7 @@ module Roast =
         | UpdateRoastDates of roastDate: LocalDate * orderByDate: LocalDate
         | StartRoast
         | CompleteRoast
+        | Create of RoastCreated
 
     type Error =
         | OrderByDateAfterRoastDate
@@ -126,7 +133,7 @@ module Roast =
         | RoastDatesCannotBeChangedOnceStarted
         | CustomerHasAlreadyPlacedOrder
         | CustomerNotIncludedInRoast
-        | AtLeastOneInvalidCoffeeQuantityInOrder // todo make this more specific
+        | AtLeastOneInvalidCoffeeQuantityInOrder // TODO: make this more specific
         | InvalidCoffeeReferenceIdsInOrder of CoffeeReferenceId list
         | MoreThanTwentySixCoffeesInRoast
         | OrderDoesNotExist
@@ -135,6 +142,7 @@ module Roast =
         | RoastAlreadyStarted
         | RoastAlreadyCompleted
         | RoastNotYetStarted
+        | RoastAlreadyCreated
 
     let getCustomerId =
         function
@@ -163,6 +171,12 @@ module Roast =
         cmd
         =
         match cmd with
+        | Create fields ->
+            if roast = Roast.Empty then
+                Ok <| Created fields
+            else
+                Error RoastAlreadyCreated
+
         | UpdateRoastDates (roastDate, orderByDate) ->
             if orderByDate >= roastDate then
                 Error OrderByDateAfterRoastDate
@@ -306,11 +320,17 @@ module Roast =
             | NotStarted -> Error RoastNotYetStarted
             | Complete -> Error RoastAlreadyCompleted
 
-    let apply (allCoffees: seq<Id<Coffee> * Coffee>) roast event =
+    let apply roast event =
         match event with
+        | Created fields ->
+            { roast with
+                Roast.Name = fields.Name
+                RoastDate = fields.RoastDate
+                OrderByDate = fields.OrderByDate }
+
         | OrderPlaced details ->
             { roast with
-                Roast.Orders = UnconfirmedOrder details :: roast.Orders }
+                Orders = UnconfirmedOrder details :: roast.Orders }
 
         | OrderCancelled customerId ->
             { roast with
@@ -387,7 +407,7 @@ module Roast =
 
     let createAggregate allCustomers allCoffees today =
         { Empty = Roast.Empty
-          Apply = apply allCoffees
+          Apply = apply
           Execute = execute allCustomers allCoffees today }
 
     let getOfferedCoffeeSummary (allCoffees: seq<Id<Coffee> * Coffee>) roast =

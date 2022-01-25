@@ -25,16 +25,20 @@ let encodeOrderDetails (order: OrderDetails) =
 
 let encodeRoastEvent event =
     match event with
+    | Created fields ->
+        Encode.object [ "name", Encode.string <| RoastName.value fields.Name
+                        "roastDate", encodeLocalDate fields.RoastDate
+                        "orderByDate", encodeLocalDate fields.OrderByDate ]
+
     | OrderPlaced details ->
         encodeOrderDetails details
 
     | OrderCancelled customerId ->
-        Encode.object [ "customerId", Encode.guid <| Id.value customerId
-                        "action", Encode.string "cancelled" ]
+        Encode.object [ "customerId", Encode.guid <| Id.value customerId ]
 
-    | OrderConfirmed customerId ->
+    | OrderConfirmed(customerId, invoiceAmt) ->
         Encode.object [ "customerId", Encode.guid <| Id.value customerId
-                        "action", Encode.string "confirmed" ]
+                        "invoiceAmt", Encode.decimal <| UsdInvoiceAmount.value invoiceAmt ]
                         
     | CoffeesAdded coffeeIds ->
         Encode.object [ "addedCoffeeIds",
@@ -89,14 +93,23 @@ let decodeOrderPlaced: Decoder<Event> =
         (Decode.field "timestamp" decodeOffsetDateTime)
         (Decode.field "lineItems" (Decode.array decodeLineItem))
 
-let decodeOrderCancelledOrConfirmed: Decoder<Event> =
-    let decodeCustomerId = Decode.field "customerId" decodeId
+let decodeInvoiceAmount: Decoder<UsdInvoiceAmount> =
+    Decode.decimal
+    |> Decode.andThen (
+        UsdInvoiceAmount.create
+        >> function
+            | Ok invoiceAmt -> Decode.succeed invoiceAmt
+            | Error e -> Decode.fail $"{e}"
+    )
 
-    Decode.field "action" Decode.string
-    |> Decode.andThen (function
-        | "cancelled" -> decodeCustomerId |> Decode.map OrderCancelled
-        | "confirmed" -> decodeCustomerId |> Decode.map OrderConfirmed
-        | _ -> Decode.fail "should have been cancelled or confirmed")
+let decodeOrderConfirmed: Decoder<Event> =
+    Decode.map2
+        (fun customerId invoiceAmt -> OrderConfirmed(customerId, invoiceAmt))
+        (Decode.field "customerId" decodeId)
+        (Decode.field "invoiceAmt" decodeInvoiceAmount)
+
+let decodeOrderCancelled: Decoder<Event> =
+    Decode.map OrderCancelled (Decode.field "customerId" decodeId)
 
 let decodeCoffeesAdded: Decoder<Event> =
     Decode.field
@@ -123,10 +136,31 @@ let decodeRoastStartedOrCompleted: Decoder<Event> =
         | "roastCompleted" -> Decode.succeed RoastCompleted
         | _ -> Decode.fail "expected roastStarted or roastCompleted not some other random string")
 
+let decodeRoastName: Decoder<RoastName> =
+    Decode.string
+    |> Decode.andThen (
+        RoastName.create
+        >> function
+            | Ok name -> Decode.succeed name
+            | Error e -> Decode.fail $"{e}"
+    )
+
+let decodeCreated: Decoder<Event> =
+    Decode.map3
+        (fun nm rdt obdt ->
+            Created { Name = nm
+                      RoastDate = rdt
+                      OrderByDate = obdt })
+        (Decode.field "name" decodeRoastName)
+        (Decode.field "roastDate" decodeLocalDate)
+        (Decode.field "orderByDate" decodeLocalDate)
+
 let decodeRoastEvent: Decoder<Event> =
     Decode.oneOf [ decodeOrderPlaced
-                   decodeOrderCancelledOrConfirmed
+                   decodeOrderConfirmed
+                   decodeOrderCancelled
                    decodeCoffeesAdded
                    decodeCustomersAdded
                    decodeRoastDatesChanged
-                   decodeRoastStartedOrCompleted ]
+                   decodeRoastStartedOrCompleted
+                   decodeCreated ]

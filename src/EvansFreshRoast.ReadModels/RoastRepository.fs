@@ -17,11 +17,48 @@ module RoastRepository =
             |> Async.map Ok
         }
 
-    let updateRoast connectionString (getAllCoffees: Async<list<Id<Coffee> * Coffee>>) (event: DomainEvent<Roast, Event>) =
+    let updateRoast connectionString (event: DomainEvent<Roast, Event>) =
         let connection = Sql.connect <| ConnectionString.value connectionString
         let roastUuid = Sql.uuid <| Id.value event.AggregateId
 
         match event.Body with
+        | Created fields ->
+            let insertRoastSql =
+                """
+                INSERT INTO roasts(
+                    roast_id
+                  , roast_name
+                  , roast_date
+                  , order_by_date
+                  , customer_ids
+                  , coffee_ids
+                  , roast_status
+                ) VALUES (
+                    @roastId
+                  , @name
+                  , @date::date
+                  , @orderByDate::date
+                  , '{}'
+                  , '{}'
+                  , 'NotStarted'
+                )
+                """
+
+            async {
+                try
+                    return! connection
+                    |> Sql.query insertRoastSql
+                    |> Sql.parameters
+                        [ "roastId", roastUuid
+                          "name", fields.Name |> RoastName.value |> Sql.string
+                          "date", fields.RoastDate.ToString("R", null) |> Sql.string
+                          "orderByDate", fields.OrderByDate.ToString("R", null) |> Sql.string ]
+                    |> Sql.executeNonQueryAsync
+                    |> awaitIgnoreOk
+                with
+                | _ -> return Error "Error inserting roast."
+            }
+
         | OrderPlaced order ->
             let insertOrderSql =
                 """
@@ -123,7 +160,7 @@ module RoastRepository =
                 """
 
             async {
-                let createInvoiceComp =
+                let getOrderId =
                     connection
                     |> Sql.query getOrderIdSql
                     |> Sql.parameters
@@ -131,21 +168,26 @@ module RoastRepository =
                           "customerId", customerId |> Id.value |> Sql.uuid ]
                     |> Sql.executeAsync (fun row -> row.int64 "order_id")
                     |> Async.AwaitTask
-                    |> Async.map List.tryHead
-                    |> Async.bind (
-                        Option.map (fun orderId ->
-                            connection
-                            |> Sql.query createInvoiceSql
-                            |> Sql.parameters
-                                [ "invoiceAmount", UsdInvoiceAmount.value invoiceAmt |> Sql.decimal
-                                  "orderId", Sql.int64 orderId ]
-                            |> Sql.executeNonQueryAsync
-                            |> awaitIgnoreOk)
-                        >> Option.defaultValue (Error "No order found for customer id." |> Async.lift)
-                    )
+
+                let insertInvoice orderId =
+                    connection
+                    |> Sql.query createInvoiceSql
+                    |> Sql.parameters
+                        [ "invoiceAmount", UsdInvoiceAmount.value invoiceAmt |> Sql.decimal
+                          "orderId", Sql.int64 orderId ]
+                    |> Sql.executeNonQueryAsync
+                    |> awaitIgnoreOk
 
                 try
-                    return! createInvoiceComp
+                    return! getOrderId
+                    |> Async.map List.tryHead
+                    |> Async.bind (
+                        Option.map insertInvoice
+                        >> Option.defaultValue (
+                            Error "No order found for customer id."
+                            |> Async.lift
+                        )
+                    )
                 with
                 | _ -> return Error "Error creating invoice."
             }
