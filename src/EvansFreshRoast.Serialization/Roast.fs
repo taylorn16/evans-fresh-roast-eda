@@ -4,31 +4,38 @@ open Thoth.Json.Net
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Roast
+open System.Collections.Generic
 open EvansFreshRoast.Serialization.Common
 
+let encodeLineItem (coffeeId: Id<Coffee>, quantity) =
+    Encode.object [ "coffeeId", Encode.guid <| Id.value coffeeId
+                    "quantity", Encode.int <| Quantity.value quantity ]
+
+let encodeOrderDetails (order: OrderDetails) =
+    let tuple (kvp: KeyValuePair<'a, 'b>) = kvp.Key, kvp.Value
+    
+    Encode.object [ "customerId", Encode.guid <| Id.value order.CustomerId
+                    "timestamp", encodeOffsetDateTime order.Timestamp
+                    "lineItems",
+                    Encode.array (
+                        order.LineItems
+                        |> Seq.map (tuple >> encodeLineItem)
+                        |> Seq.toArray
+                    ) ]
+
 let encodeRoastEvent event =
-    let encodeLineItem (coffeeId, quantity) =
-        Encode.object [ "coffeeId", Encode.guid <| Id.value coffeeId
-                        "quantity", Encode.int <| Quantity.value quantity ]
-
-    let toTuple (kvp: System.Collections.Generic.KeyValuePair<'a, 'b>) = kvp.Key, kvp.Value
-
     match event with
     | OrderPlaced details ->
-        Encode.object [ "customerId", Encode.guid <| Id.value details.CustomerId
-                        "timestamp", encodeOffsetDateTime details.Timestamp
-                        "lineItems",
-                        Encode.array (
-                            details.LineItems
-                            |> Seq.map (toTuple >> encodeLineItem)
-                            |> Seq.toArray
-                        ) ]
+        encodeOrderDetails details
+
     | OrderCancelled customerId ->
         Encode.object [ "customerId", Encode.guid <| Id.value customerId
                         "action", Encode.string "cancelled" ]
+
     | OrderConfirmed customerId ->
         Encode.object [ "customerId", Encode.guid <| Id.value customerId
                         "action", Encode.string "confirmed" ]
+                        
     | CoffeesAdded coffeeIds ->
         Encode.object [ "addedCoffeeIds",
                         Encode.array (
@@ -36,6 +43,7 @@ let encodeRoastEvent event =
                             |> Seq.map (Id.value >> Encode.guid)
                             |> Seq.toArray
                         ) ]
+
     | CustomersAdded customerIds ->
         Encode.object [ "addedCustomerIds",
                         Encode.array (
@@ -43,11 +51,16 @@ let encodeRoastEvent event =
                             |> Seq.map (Id.value >> Encode.guid)
                             |> Seq.toArray
                         ) ]
+
     | RoastDatesChanged (roastDate, orderByDate) ->
         Encode.object [ "roastDate", encodeLocalDate roastDate
                         "orderByDate", encodeLocalDate orderByDate ]
-    | RoastStarted -> Encode.string "roastStarted"
-    | RoastCompleted -> Encode.string "roastCompleted"
+
+    | RoastStarted ->
+        Encode.string "roastStarted"
+
+    | RoastCompleted ->
+        Encode.string "roastCompleted"
 
 let decodeQuantity: Decoder<Quantity> =
     let parseQuantity qty =

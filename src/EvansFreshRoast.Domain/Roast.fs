@@ -73,15 +73,26 @@ type RoastStatus =
     | InProcess
     | Complete
 
+type RoastName = private RoastName of String100
+
+module RoastName =
+    let create s = RoastName <!> String100.create s
+
+    let apply f (RoastName name) = String100.apply f name
+
+    let value = apply id
+
 type Roast =
-    { Customers: Id<Customer> list
+    { Name: RoastName
+      Customers: Id<Customer> list
       RoastDate: LocalDate
       OrderByDate: LocalDate
       Orders: Order list
       Coffees: IDictionary<CoffeeReferenceId, Id<Coffee>>
       Status: RoastStatus }
     static member Empty =
-        { Customers = List.empty
+        { Name = RoastName.create "<empty>" |> unsafeAssertOk
+          Customers = List.empty
           RoastDate = LocalDate.MinIsoValue.PlusDays(1)
           OrderByDate = LocalDate.MinIsoValue
           Orders = List.empty
@@ -92,7 +103,7 @@ module Roast =
     type Event =
         | OrderPlaced of OrderDetails
         | OrderCancelled of Id<Customer>
-        | OrderConfirmed of Id<Customer>
+        | OrderConfirmed of Id<Customer> * UsdInvoiceAmount
         | CoffeesAdded of Id<Coffee> list
         | CustomersAdded of Id<Customer> list
         | RoastDatesChanged of roastDate: LocalDate * orderByDate: LocalDate
@@ -181,7 +192,7 @@ module Roast =
                 let foldResults results =
                     let folder acc next =
                         match (acc, next) with
-                        | Ok _, Error e -> Error(List.singleton e)
+                        | Ok _, Error e -> Error [e]
                         | Error errs, Error e -> Error(e :: errs)
                         | Ok oks, Ok ok -> Ok(ok :: oks)
                         | Error errs, Ok _ -> Error errs
@@ -215,25 +226,15 @@ module Roast =
                              |> List.sumBy (fun (_, qty) -> Quantity.value qty)
                              |> Quantity.create))
 
-                    let isError =
-                        function
-                        | Error _ -> true
-                        | Ok _ -> false
-
                     let errantQuantities =
                         idQuantityMappings
-                        |> List.filter (fun (_, qty) -> isError qty)
-
-                    let assertOk =
-                        function
-                        | Ok a -> a
-                        | Error _ -> failwith "why did you assert Ok if it was an Error, you dimwit?"
+                        |> List.filter (not << (snd >> isOk))
 
                     if List.length errantQuantities > 0 then
                         Error AtLeastOneInvalidCoffeeQuantityInOrder
                     else
                         idQuantityMappings
-                        |> List.map (fun (coffeeId, quantity) -> (coffeeId, assertOk quantity))
+                        |> List.map (fun (coffeeId, quantity) -> (coffeeId, unsafeAssertOk quantity))
                         |> dict
                         |> Ok
 
@@ -279,7 +280,7 @@ module Roast =
                     | ConfirmedOrder _ -> Error OrderAlreadyConfirmed
                     | UnconfirmedOrder details ->
                         match getInvoiceAmt allCoffees details with
-                        | Ok _ -> Ok(OrderConfirmed customerId)
+                        | Ok invoiceAmt -> Ok <| OrderConfirmed(customerId, invoiceAmt)
                         | Error _ -> Error OrderWouldResultInInvalidInvoiceAmount
                 | None -> Error OrderDoesNotExist
 
@@ -307,7 +308,9 @@ module Roast =
 
     let apply (allCoffees: seq<Id<Coffee> * Coffee>) roast event =
         match event with
-        | OrderPlaced details -> { roast with Roast.Orders = UnconfirmedOrder details :: roast.Orders }
+        | OrderPlaced details ->
+            { roast with
+                Roast.Orders = UnconfirmedOrder details :: roast.Orders }
 
         | OrderCancelled customerId ->
             { roast with
@@ -315,22 +318,26 @@ module Roast =
                     roast.Orders
                     |> List.filter (getCustomerId >> (<>) customerId) }
 
-        | OrderConfirmed customerId ->
+        | OrderConfirmed(customerId, invoiceAmt) ->
             let confirmedOrder =
                 roast.Orders
-                |> List.find (getCustomerId >> (=) customerId)
-                |> function
+                |> List.tryFind (getCustomerId >> (=) customerId)
+                |> Option.map (
+                    function
                     | UnconfirmedOrder details ->
-                        match getInvoiceAmt allCoffees details with
-                        | Ok invoiceAmt -> ConfirmedOrder(details, (UnpaidInvoice invoiceAmt))
-                        | Error e -> failwith (sprintf "failed to create invoice, %A" e)
-                    | ConfirmedOrder (details, invoice) -> ConfirmedOrder(details, invoice)
+                        ConfirmedOrder(details, UnpaidInvoice invoiceAmt)
+                    | ConfirmedOrder(details, invoice) ->
+                        ConfirmedOrder(details, invoice)
+                )
+
+            let appendOrders =
+                [ if confirmedOrder.IsSome then confirmedOrder.Value ]
 
             { roast with
                 Orders =
                     roast.Orders
                     |> List.filter (getCustomerId >> (<>) customerId)
-                    |> List.append [ confirmedOrder ] }
+                    |> List.append appendOrders }
 
         | CoffeesAdded coffeeIds ->
             let getNextCoffeeReferenceIds alreadyUsedReferenceIds count =

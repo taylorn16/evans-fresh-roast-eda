@@ -1,25 +1,21 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="Helpers.fs" />
+    <Compile Include="RoastRepository.fs" />
     <Compile Include="CustomerRepository.fs" />
     <Compile Include="CoffeeRepository.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Npgsql.FSharp" Version="4.1.0" />
     <PackageReference Include="Thoth.Json.Net" Version="7.1.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\Utils\Utils.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Serialization\EvansFreshRoast.Serialization.fsproj" />
   </ItemGroup>
-
 </Project>

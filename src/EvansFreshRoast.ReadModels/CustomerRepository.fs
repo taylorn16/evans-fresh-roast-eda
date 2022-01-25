@@ -11,7 +11,7 @@ open EvansFreshRoast.Serialization.Customer
 module CustomerRepository =
     let updateCustomer connectionString (event: DomainEvent<Customer, Event>) =
         let connection = Sql.connect <| ConnectionString.value connectionString
-        let eventUuid = event.AggregateId |> Id.value |> Sql.uuid
+        let customerUuid = event.AggregateId |> Id.value |> Sql.uuid
 
         match event.Body with
         | Created fields ->
@@ -33,7 +33,7 @@ module CustomerRepository =
                     return! connection
                     |> Sql.query sql
                     |> Sql.parameters
-                        [ "id", eventUuid
+                        [ "id", customerUuid
                           "data", Sql.jsonb json ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
@@ -60,7 +60,7 @@ module CustomerRepository =
                         SET customer_data = {jsonbSet}
                         WHERE customer_id = @id
                         """
-                    |> Sql.parameters [ "id", eventUuid ]
+                    |> Sql.parameters [ "id", customerUuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.Ignore
@@ -79,7 +79,7 @@ module CustomerRepository =
                         SET customer_data = jsonb_set(customer_data, '{status}', '"Subscribed"', true)
                         WHERE customer_id = @id
                         """
-                    |> Sql.parameters [ "id", eventUuid ]
+                    |> Sql.parameters [ "id", customerUuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.Ignore
@@ -99,7 +99,7 @@ module CustomerRepository =
                         SET customer_data = jsonb_set(customer_data, '{status}', '"Unsubscribed"', true)
                         WHERE customer_id = @id
                         """
-                    |> Sql.parameters [ "id", eventUuid ]
+                    |> Sql.parameters [ "id", customerUuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.map (fun _ -> ())

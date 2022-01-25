@@ -58,3 +58,9 @@ module Async =
         async {
             return x
         }
+
+    let bind (f: 'a -> Async<'b>) (comp: Async<'a>) =
+        async {
+            let! x = comp
+            return! f x
+        }

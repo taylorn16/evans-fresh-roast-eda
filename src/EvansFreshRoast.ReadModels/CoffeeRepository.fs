@@ -11,7 +11,7 @@ open EvansFreshRoast.Serialization.Coffee
 module CoffeeRepository =
     let updateCoffee connectionString (event: DomainEvent<Coffee, Event>) =
         let connection = Sql.connect <| ConnectionString.value connectionString
-        let eventUuid = event.AggregateId |> Id.value |> Sql.uuid
+        let coffeeUuid = event.AggregateId |> Id.value |> Sql.uuid
 
         match event.Body with
         | Created coffee ->
@@ -35,7 +35,7 @@ module CoffeeRepository =
                     return! connection
                     |> Sql.query sql
                     |> Sql.parameters
-                        [ "id", eventUuid
+                        [ "id", coffeeUuid
                           "data", Sql.jsonb json ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
@@ -66,7 +66,7 @@ module CoffeeRepository =
                         SET coffee_data = {jsonbSet}
                         WHERE coffee_id = @id
                         """
-                    |> Sql.parameters [ "id", eventUuid ]
+                    |> Sql.parameters [ "id", coffeeUuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.Ignore
@@ -85,7 +85,7 @@ module CoffeeRepository =
                         SET coffee_data = jsonb_set(coffee_data, '{status}', '"Active"', true)
                         WHERE coffee_id = @id
                         """
-                    |> Sql.parameters [ "id", eventUuid ]
+                    |> Sql.parameters [ "id", coffeeUuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.Ignore
@@ -105,7 +105,7 @@ module CoffeeRepository =
                         SET coffee_data = jsonb_set(coffee_data, '{status}', '"Inactive"', true)
                         WHERE coffee_id = @id
                         """
-                    |> Sql.parameters [ "id", eventUuid ]
+                    |> Sql.parameters [ "id", coffeeUuid ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.Ignore
