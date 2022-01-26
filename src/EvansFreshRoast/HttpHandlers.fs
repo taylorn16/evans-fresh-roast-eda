@@ -11,21 +11,17 @@ module HttpHandlers =
     open EvansFreshRoast.Composition
     open EvansFreshRoast.Framework
     open EvansFreshRoast.Utils
+    open Thoth.Json.Net
+    open EvansFreshRoast.Serialization.Coffee
 
     type DtoParseError =
         | DtoFieldMissing
-        | DomainValidationErr of ConstrainedTypeError<DomainValidationError>
+        | DomainValidationErr of ConstrainedTypeError<Domain.ValidationError>
 
     let eventStoreConnectionString =
         // "Host=eventstoredb;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
         "Host=localhost;Port=5432;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
         |> ConnectionString.create
-
-    let handleGetHello (next: HttpFunc) (ctx: HttpContext) =
-        task {
-            let response = { Text = "Hello world, from Giraffe!" }
-            return! json response next ctx
-        }
 
     let invert (opt: option<Result<'a, 'b>>) =
         match opt with
@@ -36,7 +32,7 @@ module HttpHandlers =
         | None -> Ok None
 
     let toOptionalDomainValue
-        (ctor: 'a -> Result<'b, ConstrainedTypeError<DomainValidationError>>)
+        (ctor: 'a -> Result<'b, ConstrainedTypeError<Domain.ValidationError>>)
         (rawVal: 'a)
         =
         rawVal
@@ -45,161 +41,13 @@ module HttpHandlers =
         |> invert
 
     let toRequiredDomainValue
-        (ctor: 'a -> Result<'b, ConstrainedTypeError<DomainValidationError>>)
+        (ctor: 'a -> Result<'b, ConstrainedTypeError<Domain.ValidationError>>)
         (rawVal: 'a)
         =
         rawVal
         |> Option.ofObj
         |> Result.ofOption DtoFieldMissing
         |> Result.bind (ctor >> Result.mapError DomainValidationErr)
-
-    let getCoffees (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
-        task {
-            let! coffees = Async.StartAsTask(
-                compositionRoot.GetAllCoffees(),
-                cancellationToken=ctx.RequestAborted)
-
-            let coffeeDtos =
-                coffees
-                |> List.map (fun (id, coff) ->
-                    { Id = Id.value id
-                      Name = CoffeeName.value coff.Name
-                      Description = CoffeeDescription.value coff.Description
-                      PricePerBag = UsdPrice.value coff.PricePerBag
-                      WeightPerBag = OzWeight.value coff.WeightPerBag })
-
-            return! Successful.OK coffeeDtos next ctx
-        }
-
-    let getCoffee (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpContext) =
-        task {
-            match compositionRoot.GetCoffee <!> (Id.create id) with
-            | Ok getCoffee ->
-                match! Async.StartAsTask(getCoffee, cancellationToken=ctx.RequestAborted) with
-                | Some (coffeeId, coffee) ->
-                    let coffeeDto =
-                        { Id = Id.value coffeeId
-                          Name = CoffeeName.value coffee.Name
-                          Description = CoffeeDescription.value coffee.Description
-                          PricePerBag = UsdPrice.value coffee.PricePerBag
-                          WeightPerBag = OzWeight.value coffee.WeightPerBag }
-
-                    return! Successful.OK coffeeDto next ctx
-                | None ->
-                    return! RequestErrors.NOT_FOUND "Coffee not found" next ctx
-            
-            | Error e ->
-                return! RequestErrors.BAD_REQUEST e next ctx
-        }
-
-    let putCoffee (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpContext) =
-        task {
-            let! dto = ctx.BindJsonAsync<CreateCoffeeDto>()
-
-            let name = dto.Name |> toOptionalDomainValue CoffeeName.create
-            let description = dto.Description |> toOptionalDomainValue CoffeeDescription.create
-            let price = dto.PricePerBag |>  UsdPrice.create |> Result.map Some
-            let weight = dto.WeightPerBag |> OzWeight.create |> Result.map Some
-
-            let buildUpdateFields nm desc pr wt: CoffeeUpdated =
-                { Name = nm
-                  Description = desc
-                  PricePerBag = pr
-                  WeightPerBag = wt }
-
-            let handleCommand =
-                Aggregate.createHandler
-                    Coffee.aggregate
-                    compositionRoot.LoadCoffeeEvents
-                    compositionRoot.SaveCoffeeEvent
-
-            let coffeeId = Id.create id |> unsafeAssertOk
-
-            let cmdResultAsync =
-                buildUpdateFields <!> name <*> description <*> price <*> weight
-                |> Result.map Coffee.Command.Update
-                |> Result.map (handleCommand coffeeId)
-
-            match cmdResultAsync with
-            | Ok cmdResultAsync' ->
-                match! Async.StartAsTask(cmdResultAsync', cancellationToken = ctx.RequestAborted) with
-                | Ok evt ->
-                    let responseText =
-                        sprintf
-                            "Coffee updated. Event Id = %A; Aggregate Id = %A"
-                            (Id.value evt.Id)
-                            (Id.value evt.AggregateId)
-
-                    return! Successful.accepted (text responseText) next ctx
-                | Error handlerErr ->
-                    return! ServerErrors.internalError (text "handler error") next ctx
-            | Error domainErr ->
-                return! ServerErrors.internalError (text "domain validation error") next ctx
-        }
-
-    let postCoffee (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
-        task {
-            let! dto = ctx.BindJsonAsync<CreateCoffeeDto>()
-
-            let name = dto.Name |> toRequiredDomainValue CoffeeName.create
-            let description = dto.Description |> toRequiredDomainValue CoffeeDescription.create
-            let price = dto.PricePerBag |> UsdPrice.create |> Result.mapError DomainValidationErr
-            let weight = dto.WeightPerBag |> OzWeight.create |> Result.mapError DomainValidationErr
-
-            let buildCreatedFields nm desc pr wt: CoffeeCreated =
-                { Name = nm
-                  Description = desc
-                  PricePerBag = pr
-                  WeightPerBag = wt }
-
-            let handleCommand =
-                Aggregate.createHandler
-                    Coffee.aggregate
-                    compositionRoot.LoadCoffeeEvents
-                    compositionRoot.SaveCoffeeEvent
-
-            let cmdResultAsync =
-                buildCreatedFields <!> name <*> description <*> price <*> weight
-                |> Result.map Coffee.Command.Create
-                |> Result.map (handleCommand <| Id.newId())
-
-            match cmdResultAsync with
-            | Ok cmdResultAsync' ->
-                match! Async.StartAsTask(cmdResultAsync', cancellationToken = ctx.RequestAborted) with
-                | Ok evt ->
-                    let responseText =
-                        sprintf
-                            "Coffee created. Event Id = %A; Aggregate Id = %A"
-                            (Id.value evt.Id)
-                            (Id.value evt.AggregateId)
-
-                    return! Successful.accepted (text responseText) next ctx
-                | Error handlerErr ->
-                    return! ServerErrors.internalError (text "handler error") next ctx
-            | Error domainErr ->
-                return! ServerErrors.internalError (text "domain validation error") next ctx
-        }
-
-    let activateCoffee id (next: HttpFunc) (ctx: HttpContext) =
-        task {
-            let handleCommand =
-                Aggregate.createHandler
-                    Coffee.aggregate
-                    (loadCoffeeEvents eventStoreConnectionString)
-                    (saveCoffeeEvent eventStoreConnectionString)
-
-            match Id.create id with
-            | Ok coffeeId ->
-                let handleCommandTask = handleCommand coffeeId Coffee.Command.Activate
-                match! Async.StartAsTask(handleCommandTask, cancellationToken = ctx.RequestAborted) with
-                | Ok evt ->
-                    return! Successful.accepted (text "activated") next ctx
-                | Error err ->
-                    return! ServerErrors.internalError (text "handler error") next ctx
-            | Error err ->
-                return! ServerErrors.internalError (text "invalid id") next ctx
-            
-        }
 
     let handlePostRoast (next: HttpFunc) (ctx: HttpContext) =
         task {
@@ -232,6 +80,12 @@ module HttpHandlers =
             | Error err -> return! ServerErrors.internalError (text $"{err}") next ctx
         }
 
+    let roastRoutes (compositionRoot: CompositionRoot) = choose [
+        POST >=> choose [
+            routeCix "/roasts(/?)" >=> handlePostRoast
+        ]
+    ]
+
     let getCustomers (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
         task {
             let! customers = Async.StartAsTask(
@@ -249,6 +103,18 @@ module HttpHandlers =
         }
 
     let getCustomer (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpContext) =
+        let getValidationErrorHandler error =
+            let genericErrorHandler =
+                ServerErrors.INTERNAL_ERROR "Something went wrong."
+
+            match error with
+            | FrameworkTypeError err ->
+                match err with
+                | IdIsEmpty -> RequestErrors.BAD_REQUEST "Customer id cannot be empty."
+                | _ -> genericErrorHandler
+            | _ -> genericErrorHandler
+            
+        
         task {
             match compositionRoot.GetCustomer <!> (Id.create id) with
             | Ok getCustomer ->
@@ -263,8 +129,8 @@ module HttpHandlers =
                 | None ->
                     return! RequestErrors.NOT_FOUND "Customer not found" next ctx
             
-            | Error e ->
-                return! RequestErrors.BAD_REQUEST e next ctx
+            | Error err ->
+                return! getValidationErrorHandler err next ctx
         }
 
     let postCustomer (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
@@ -307,3 +173,13 @@ module HttpHandlers =
                 let responseText = sprintf "Validation error: %A" e
                 return! ServerErrors.internalError (text responseText) next ctx
         }
+
+    let customerRoutes compositionRoot = choose [
+        GET >=> choose [
+            routeCif "/customers/%O" (getCustomer compositionRoot)
+            routeCix "/customers(/?)" >=> getCustomers compositionRoot
+        ]
+        POST >=> choose [
+            routeCix "/customers(/?)" >=> postCustomer compositionRoot
+        ]
+    ]

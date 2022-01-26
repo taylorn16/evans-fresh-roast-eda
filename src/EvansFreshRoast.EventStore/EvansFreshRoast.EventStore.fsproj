@@ -4,6 +4,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Types.fs" />
     <Compile Include="EventStoreDb.fs" />
     <Compile Include="Publisher.fs" />
     <Compile Include="Roast.fs" />

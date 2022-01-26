@@ -7,19 +7,6 @@ open Npgsql.FSharp
 open Thoth.Json.Net
 open EvansFreshRoast.Framework
 
-type DomainEvent =
-    { Id: Guid
-      AggregateId: Guid
-      AggregateName: string
-      Version: int64
-      EventName: string
-      Payload: string
-      Timestamp: OffsetDateTime }
-
-type EventStoreDbError =
-    | DatabaseErrorSavingEvent
-    | DatabaseErrorLoadingEvents
-
 [<RequireQualifiedAccess>]
 module Db =
     let private createEvent connectionString domainEvent =
@@ -61,7 +48,7 @@ module Db =
                     |> Async.AwaitTask
                     |> Async.map Ok
             with
-            | _ -> return Error DatabaseErrorSavingEvent
+            | ex -> return Error <| ErrorSavingEvent(domainEvent, ex)
         }
 
     let private getAllEvents connectionString aggregateId =
@@ -93,7 +80,7 @@ module Db =
                     |> Async.AwaitTask
                     |> Async.map Ok
             with
-            | _ -> return Error DatabaseErrorLoadingEvents
+            | ex -> return Error <| ErrorLoadingEvents(aggregateId, ex)
         }
 
     let loadEvents

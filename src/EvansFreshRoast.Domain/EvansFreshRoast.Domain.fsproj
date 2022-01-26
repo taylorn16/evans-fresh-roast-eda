@@ -4,8 +4,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="BaseTypes.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="Sms.fs" />
     <Compile Include="Coffee.fs" />
     <Compile Include="Customer.fs" />
     <Compile Include="Roast.fs" />

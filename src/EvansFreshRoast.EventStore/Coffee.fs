@@ -7,13 +7,8 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Coffee
 open EvansFreshRoast.Utils
 
-type EventStoreError =
-    | DataError of EventStoreDbError
-    | SerializationError of string
-    | PublishingError of exn
-
 let loadCoffeeEvents connectionString =
-    Db.loadEvents connectionString decodeCoffeeEvent DataError SerializationError
+    Db.loadEvents connectionString decodeCoffeeEvent DatabaseError SerializationError
 
 let saveCoffeeEvent connectionString (event: DomainEvent<Coffee, Event>) =
     let getEventName =
@@ -23,7 +18,7 @@ let saveCoffeeEvent connectionString (event: DomainEvent<Coffee, Event>) =
         | Activated _ -> "Coffee Activated"
         | Deactivated _ -> "Coffee Deactivated"
 
-    Db.saveEvent connectionString encodeCoffeeEvent "Coffee" getEventName DataError event
+    Db.saveEvent connectionString encodeCoffeeEvent "Coffee" getEventName DatabaseError event
     |> Async.map (
         Result.bind (fun _ -> 
             Publisher.publishCoffeeEvent event

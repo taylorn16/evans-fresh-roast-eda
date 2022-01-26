@@ -3,6 +3,7 @@ namespace EvansFreshRoast.Composition.Leaves
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Customer
+open EvansFreshRoast.EventStore
 open EvansFreshRoast.EventStore.Customer
 open EvansFreshRoast.ReadModels.CustomerRepository
 

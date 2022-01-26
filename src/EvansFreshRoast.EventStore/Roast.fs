@@ -7,17 +7,13 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Roast
 open EvansFreshRoast.Utils
 
-type EventStoreError =
-    | DataError of EventStoreDbError
-    | SerializationError of string
-    | PublishingError of exn
-
 let loadRoastEvents connectionString =
-    Db.loadEvents connectionString decodeRoastEvent DataError SerializationError
+    Db.loadEvents connectionString decodeRoastEvent DatabaseError SerializationError
 
 let saveRoastEvent connectionString (event: DomainEvent<Roast, Event>) =
     let getEventName =
         function
+        | Created _ -> "Roast Created"
         | OrderPlaced _ -> "Order Placed"
         | OrderCancelled _ -> "Order Cancelled"
         | OrderConfirmed _ -> "Order Confirmed"
@@ -27,7 +23,7 @@ let saveRoastEvent connectionString (event: DomainEvent<Roast, Event>) =
         | RoastStarted -> "Roast Started"
         | RoastCompleted -> "Roast Completed"
 
-    Db.saveEvent connectionString encodeRoastEvent "Roast" getEventName DataError event
+    Db.saveEvent connectionString encodeRoastEvent "Roast" getEventName DatabaseError event
     |> Async.map (
         Result.bind (fun _ ->
             Publisher.publishRoastEvent event

@@ -6,12 +6,12 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.EventStore
 
 type CompositionRoot =
-    { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, Customer.EventStoreError>
-      SaveCustomerEvent: SaveEvent<Customer, Customer.Event, Customer.EventStoreError>
+    { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
+      SaveCustomerEvent: SaveEvent<Customer, Customer.Event, EventStoreError>
       GetCustomer: LoadAggregate<Customer>
       GetAllCustomers: LoadAllAggregates<Customer>
-      LoadCoffeeEvents: LoadEvents<Coffee, Coffee.Event, Coffee.EventStoreError>
-      SaveCoffeeEvent: SaveEvent<Coffee, Coffee.Event, Coffee.EventStoreError>
+      LoadCoffeeEvents: LoadEvents<Coffee, Coffee.Event, EventStoreError>
+      SaveCoffeeEvent: SaveEvent<Coffee, Coffee.Event, EventStoreError>
       GetCoffee: LoadAggregate<Coffee>
       GetAllCoffees: LoadAllAggregates<Coffee> }
 
