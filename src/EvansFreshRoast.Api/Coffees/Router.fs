@@ -1,7 +1,7 @@
-namespace EvansFreshRoast.Api.Coffee
+namespace EvansFreshRoast.Api.Coffees
 
 open Giraffe
-open EvansFreshRoast.Api.Coffee.HttpHandlers
+open EvansFreshRoast.Api.Coffees.HttpHandlers
 
 module Router =
     let getRouter compositionRoot =

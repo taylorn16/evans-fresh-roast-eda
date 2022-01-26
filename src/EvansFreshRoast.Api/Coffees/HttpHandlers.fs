@@ -1,7 +1,7 @@
-namespace EvansFreshRoast.Api.Coffee
+namespace EvansFreshRoast.Api.Coffees
 
 open EvansFreshRoast.Api.Models
-open EvansFreshRoast.Api.Coffee.RequestDecoders
+open EvansFreshRoast.Api.Coffees.RequestDecoders
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Framework

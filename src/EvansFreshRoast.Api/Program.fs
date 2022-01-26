@@ -24,7 +24,7 @@ open EvansFreshRoast.Api
 
 let webApp (compositionRoot: CompositionRoot) =
     choose [
-        subRoute "/api/v1/coffees" (Coffee.Router.getRouter compositionRoot)
+        subRoute "/api/v1/coffees" (Coffees.Router.getRouter compositionRoot)
         subRoute "/api/v1/customers" (customerRoutes compositionRoot)
         subRoute "/api/v1/roasts" (roastRoutes compositionRoot)
         setStatusCode 404 >=> text "Not Found"

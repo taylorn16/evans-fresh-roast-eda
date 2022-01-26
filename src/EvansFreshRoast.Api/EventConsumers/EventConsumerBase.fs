@@ -28,7 +28,8 @@ type EventConsumerBase<'State, 'Event>
         HostName = "localhost", //"rabbitmq",
         UserName = "guest",
         Password = "guest",
-        Port = 5672)
+        Port = 5672,
+        AutomaticRecoveryEnabled = true)
     let connection = connectionFactory.CreateConnection()
     let channel = connection.CreateModel()
 

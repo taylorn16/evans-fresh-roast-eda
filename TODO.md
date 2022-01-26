@@ -1,0 +1,12 @@
+- JWT Authentication
+- RabbitMQ settings from config
+- Reorganize customers and roasts API endpoints
+- Incoming SMS webhook/parsing
+- Finish composition root for roasts
+- handler wrapper for incoming ids??
+- roast read model event consumer
+- rename and reorganize Utils project
+- flesh out rest of customers api
+- design/plan out roasts api
+- Error handling/messaging/logginc -- basically everywhere!
+- 

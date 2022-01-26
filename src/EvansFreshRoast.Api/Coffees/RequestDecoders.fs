@@ -1,4 +1,4 @@
-namespace EvansFreshRoast.Api.Coffee
+namespace EvansFreshRoast.Api.Coffees
 
 open Thoth.Json.Net
 open EvansFreshRoast.Domain
