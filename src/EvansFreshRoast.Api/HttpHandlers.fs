@@ -1,22 +1,18 @@
-namespace EvansFreshRoast
+namespace EvansFreshRoast.Api
+
+open Microsoft.AspNetCore.Http
+open Giraffe
+open EvansFreshRoast.Api.Models
+open EvansFreshRoast.Domain
+open EvansFreshRoast.EventStore.Roast
+open EvansFreshRoast.Api.Composition
+open EvansFreshRoast.Framework
+open EvansFreshRoast.Utils
 
 module HttpHandlers =
-
-    open Microsoft.AspNetCore.Http
-    open Giraffe
-    open EvansFreshRoast.Models
-    open EvansFreshRoast.Domain
-    open EvansFreshRoast.EventStore.Roast
-    open EvansFreshRoast.EventStore.Coffee
-    open EvansFreshRoast.Composition
-    open EvansFreshRoast.Framework
-    open EvansFreshRoast.Utils
-    open Thoth.Json.Net
-    open EvansFreshRoast.Serialization.Coffee
-
     type DtoParseError =
         | DtoFieldMissing
-        | DomainValidationErr of ConstrainedTypeError<Domain.ValidationError>
+        | DomainValidationErr of ConstrainedTypeError<ValidationError>
 
     let eventStoreConnectionString =
         // "Host=eventstoredb;Database=evans_fresh_roast_events;Username=event_store_user;Password=event_store_pass;"
@@ -32,7 +28,7 @@ module HttpHandlers =
         | None -> Ok None
 
     let toOptionalDomainValue
-        (ctor: 'a -> Result<'b, ConstrainedTypeError<Domain.ValidationError>>)
+        (ctor: 'a -> Result<'b, ConstrainedTypeError<ValidationError>>)
         (rawVal: 'a)
         =
         rawVal
@@ -41,7 +37,7 @@ module HttpHandlers =
         |> invert
 
     let toRequiredDomainValue
-        (ctor: 'a -> Result<'b, ConstrainedTypeError<Domain.ValidationError>>)
+        (ctor: 'a -> Result<'b, ConstrainedTypeError<ValidationError>>)
         (rawVal: 'a)
         =
         rawVal

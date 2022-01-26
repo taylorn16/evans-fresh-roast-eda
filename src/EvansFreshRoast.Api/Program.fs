@@ -1,4 +1,4 @@
-module EvansFreshRoast.App
+module EvansFreshRoast.Api
 
 open System
 open Microsoft.AspNetCore.Builder
@@ -8,15 +8,15 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
-open EvansFreshRoast.HttpHandlers
+open EvansFreshRoast.Api.HttpHandlers
 open System.Text.Json
 open NodaTime.Serialization.SystemTextJson
 open NodaTime
-open EvansFreshRoast.EventConsumers.ReadModels
-open EvansFreshRoast.EventConsumers.Sms
+open EvansFreshRoast.Api.EventConsumers.ReadModels
+open EvansFreshRoast.Api.EventConsumers.Sms
 open Microsoft.Extensions.Configuration
-open EvansFreshRoast.Composition
-open EvansFreshRoast.Coffee
+open EvansFreshRoast.Api.Composition
+open EvansFreshRoast.Api
 
 // ---------------------------------
 // Web app
@@ -24,7 +24,7 @@ open EvansFreshRoast.Coffee
 
 let webApp (compositionRoot: CompositionRoot) =
     choose [
-        subRoute "/api/v1/coffees" (coffeeRoutes compositionRoot)
+        subRoute "/api/v1/coffees" (Coffee.Router.getRouter compositionRoot)
         subRoute "/api/v1/customers" (customerRoutes compositionRoot)
         subRoute "/api/v1/roasts" (roastRoutes compositionRoot)
         setStatusCode 404 >=> text "Not Found"

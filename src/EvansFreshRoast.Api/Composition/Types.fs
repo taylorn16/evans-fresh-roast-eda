@@ -1,4 +1,4 @@
-namespace EvansFreshRoast.Composition
+namespace EvansFreshRoast.Api.Composition
 
 open EvansFreshRoast.Framework
 

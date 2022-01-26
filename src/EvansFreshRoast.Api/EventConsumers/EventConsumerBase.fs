@@ -1,4 +1,4 @@
-namespace EvansFreshRoast.EventConsumers
+namespace EvansFreshRoast.Api.EventConsumers
 
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Hosting

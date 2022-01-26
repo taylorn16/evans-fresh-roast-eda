@@ -1,6 +1,6 @@
-namespace EvansFreshRoast.EventConsumers.ReadModels
+namespace EvansFreshRoast.Api.EventConsumers.ReadModels
 
-open EvansFreshRoast.EventConsumers
+open EvansFreshRoast.Api.EventConsumers
 open Microsoft.Extensions.Logging
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Customer

@@ -1,4 +1,4 @@
-namespace EvansFreshRoast.Composition.Leaves
+namespace EvansFreshRoast.Api.Composition.Leaves
 
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain

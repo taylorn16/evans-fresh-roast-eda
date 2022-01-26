@@ -1,4 +1,4 @@
-namespace EvansFreshRoast.Models
+namespace EvansFreshRoast.Api.Models
 
 open NodaTime
 open System

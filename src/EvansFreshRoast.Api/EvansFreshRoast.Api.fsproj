@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <AssemblyName>EvansFreshRoast.App</AssemblyName>
+    <AssemblyName>EvansFreshRoast.Api</AssemblyName>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
   </PropertyGroup>
   <ItemGroup>
@@ -17,7 +17,9 @@
     <Compile Include="Composition/Leaves/CoffeeWorkflowDependencies.fs" />
     <Compile Include="Composition/CompositionRoot.fs" />
     <Compile Include="Models.fs" />
-    <Compile Include="Coffee.fs" />
+    <Compile Include="Coffee/RequestDecoders.fs" />
+    <Compile Include="Coffee/HttpHandlers.fs" />
+    <Compile Include="Coffee/Router.fs" />
     <Compile Include="HttpHandlers.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />

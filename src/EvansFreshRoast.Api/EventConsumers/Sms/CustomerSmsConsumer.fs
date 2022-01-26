@@ -1,6 +1,6 @@
-namespace EvansFreshRoast.EventConsumers.Sms
+namespace EvansFreshRoast.Api.EventConsumers.Sms
 
-open EvansFreshRoast.EventConsumers
+open EvansFreshRoast.Api.EventConsumers
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Serialization.DomainEvents
 open EvansFreshRoast.Serialization.Customer

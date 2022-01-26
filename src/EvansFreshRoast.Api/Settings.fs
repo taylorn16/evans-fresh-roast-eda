@@ -1,4 +1,4 @@
-namespace EvansFreshRoast
+namespace EvansFreshRoast.Api
 
 [<CLIMutable>]
 type Twilio =

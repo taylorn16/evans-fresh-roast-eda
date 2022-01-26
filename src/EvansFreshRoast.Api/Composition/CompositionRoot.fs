@@ -1,9 +1,9 @@
-namespace EvansFreshRoast.Composition
+namespace EvansFreshRoast.Api.Composition
 
-open EvansFreshRoast
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.EventStore
+open EvansFreshRoast.Api
 
 type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
