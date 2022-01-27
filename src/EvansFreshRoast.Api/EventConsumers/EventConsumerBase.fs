@@ -19,17 +19,12 @@ type Ack = unit -> unit
 [<AbstractClass>]
 type EventConsumerBase<'State, 'Event>
     ( logger: ILogger,
+      connectionFactory: IConnectionFactory,
       exchangeName: string,
       route: string,
       queueName: string,
       decoder: Decoder<DomainEvent<'State, 'Event>> ) =
 
-    let connectionFactory = ConnectionFactory(
-        HostName = "localhost", //"rabbitmq",
-        UserName = "guest",
-        Password = "guest",
-        Port = 5672,
-        AutomaticRecoveryEnabled = true)
     let connection = connectionFactory.CreateConnection()
     let channel = connection.CreateModel()
 
@@ -45,40 +40,39 @@ type EventConsumerBase<'State, 'Event>
             channel.QueueDeclare(queueName, true, false, false, null) |> ignore
             channel.QueueBind(queueName, exchangeName, route, null)
 
-            let consumeTask =
-                async {
-                    while not cts.Token.IsCancellationRequested do
-                        do! Task.Delay(500, cts.Token) |> Async.AwaitTask
+            let consumeTask = async {
+                while not cts.Token.IsCancellationRequested do
+                    do! Task.Delay(500, cts.Token) |> Async.AwaitTask
 
-                        let queueMsg = channel.BasicGet(queueName, false)
+                    let queueMsg = channel.BasicGet(queueName, false)
 
-                        let domainEvent =
-                            queueMsg
-                            |> Option.ofObj
-                            |> Result.ofOption NoMessageAvailable
-                            |> Result.map (fun msg -> Encoding.UTF8.GetString msg.Body.Span)
-                            |> Result.bind (
-                                Decode.fromString decoder >> (Result.mapError DeserializationError)
-                            )
+                    let domainEvent =
+                        queueMsg
+                        |> Option.ofObj
+                        |> Result.ofOption NoMessageAvailable
+                        |> Result.map (fun msg -> Encoding.UTF8.GetString msg.Body.Span)
+                        |> Result.bind (
+                            Decode.fromString decoder >> (Result.mapError DeserializationError)
+                        )
 
-                        let ack () = channel.BasicAck(queueMsg.DeliveryTag, false)
+                    let ack () = channel.BasicAck(queueMsg.DeliveryTag, false)
 
-                        match domainEvent with
-                        | Ok evt ->
-                            match! this.handleEvent evt with
-                            | Ok () ->
-                                ack()
-                                return ()
-                            | Error e ->
-                                logger.LogError(e)
-                                ack()
-                                return ()
-                        | Error (DeserializationError e) ->
+                    match domainEvent with
+                    | Ok evt ->
+                        match! this.handleEvent evt with
+                        | Ok () ->
+                            ack()
+                            return ()
+                        | Error e ->
                             logger.LogError(e)
                             ack()
-                            return () // error deserializing event
-                        | _ -> return () // no message
-                }
+                            return ()
+                    | Error (DeserializationError e) ->
+                        logger.LogError(e)
+                        ack()
+                        return () // error deserializing event
+                    | _ -> return () // no message
+            }
             Async.Start(consumeTask, cts.Token)
 
             return ()

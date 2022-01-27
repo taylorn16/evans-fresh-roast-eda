@@ -192,6 +192,12 @@ module RoastRepository =
                 | _ -> return Error "Error creating invoice."
             }
 
+        | InvoicePaid _ ->
+            async { return Ok () }
+
+        | ReminderSent ->
+            async { return Ok () }
+
         | CoffeesAdded coffeeIds ->
             async {
                 try
@@ -211,6 +217,9 @@ module RoastRepository =
                 with
                 | _ -> return Error "Error adding coffees to roast."
             }
+
+        | CoffeesRemoved coffeeIds ->
+            async { return Ok () }
 
         | CustomersAdded customerIds ->
             async {
@@ -232,6 +241,9 @@ module RoastRepository =
                 with
                 | _ -> return Error "Error adding customers to roast."
             }
+
+        | CustomersRemoved customerIds ->
+            async { return Ok () }
 
         | RoastDatesChanged (roastDate, orderByDate) ->
             let formatDate (dt: LocalDate) =

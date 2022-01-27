@@ -16,6 +16,7 @@ open EvansFreshRoast.Api.EventConsumers.Sms
 open Microsoft.Extensions.Configuration
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Api
+open RabbitMQ.Client
 
 // ---------------------------------
 // Web app
@@ -64,7 +65,10 @@ let configureApp (compositionRoot: CompositionRoot) (app: IApplicationBuilder) =
         .UseCors(configureCors)
         .UseGiraffe(webApp compositionRoot)
 
-let configureServices (services: IServiceCollection) =
+let configureServices (compositionRoot: CompositionRoot) (services: IServiceCollection) =
+    services.AddSingleton<CompositionRoot>(compositionRoot) |> ignore
+    services.AddSingleton<IConnectionFactory>(fun sp ->
+        sp.GetRequiredService<CompositionRoot>().RabbitMqConnectionFactory) |> ignore
     services.AddHostedService<CustomerReadModelConsumer>() |> ignore
     services.AddHostedService<CoffeeReadModelConsumer>() |> ignore
     services.AddHostedService<CustomerSmsConsumer>() |> ignore
@@ -101,7 +105,7 @@ let main args =
         .ConfigureWebHostDefaults(fun webHostBuilder ->
             webHostBuilder
                 .Configure(Action<IApplicationBuilder> (configureApp compositionRoot))
-                .ConfigureServices(Action<IServiceCollection> configureServices)
+                .ConfigureServices(Action<IServiceCollection> (configureServices compositionRoot))
                 .ConfigureLogging(configureLogging)
             |> ignore)
         .Build()

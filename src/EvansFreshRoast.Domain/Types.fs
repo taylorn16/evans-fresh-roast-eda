@@ -6,6 +6,7 @@ open System.Text.RegularExpressions
 
 type ValidationError =
     | IntIsNotPositive
+    | IntIsNegative
     | StringExceedsLimit of int
     | StringIsEmpty
     | PriceIsNegative
@@ -18,6 +19,22 @@ type ValidationError =
     | QuantityIsNegative
     | QuantityExceeds50Bags
     | ReferenceIdMustBeAtoZ
+
+type NonNegativeInt = private NonNegativeInt of int
+module NonNegativeInt =
+    let create i =
+        if i < 0 then
+            Error <| DomainTypeError IntIsNegative
+        else
+            Ok <| NonNegativeInt i
+
+    let apply f (NonNegativeInt i) = f i
+
+    let value = apply id
+
+    let zero = NonNegativeInt 0
+
+    let increment = NonNegativeInt << apply ((+) 1)
 
 type PositiveInt = private PositiveInt of int
 module PositiveInt =

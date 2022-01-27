@@ -5,6 +5,7 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.EventStore
 open EvansFreshRoast.Api
 open NodaTime
+open RabbitMQ.Client
 
 type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
@@ -19,7 +20,8 @@ type CompositionRoot =
       SaveRoastEvent: SaveEvent<Roast, Roast.Event, EventStoreError>
       GetRoast: LoadAggregate<Roast>
       GetAllRoasts: LoadAllAggregates<Roast>
-      GetToday: unit -> LocalDate }
+      GetToday: unit -> LocalDate
+      RabbitMqConnectionFactory: IConnectionFactory }
     member this.CustomerCommandHandler with get () =
         Aggregate.createHandler
             Customer.aggregate
@@ -67,6 +69,13 @@ module CompositionRoot =
                 eventStoreConnectionString
                 readStoreConnectionString
 
+        let rabbitMqConnectionFactory = ConnectionFactory(
+            HostName = settings.RabbitMq.Hostname,
+            UserName = settings.RabbitMq.Username,
+            Password = settings.RabbitMq.Password,
+            Port = settings.RabbitMq.Port,
+            AutomaticRecoveryEnabled = true)
+
         { LoadCustomerEvents = customersWorkflow.LoadEvents
           SaveCustomerEvent = customersWorkflow.SaveEvent
           GetCustomer = customersWorkflow.GetCustomer
@@ -79,4 +88,5 @@ module CompositionRoot =
           SaveRoastEvent = roastsWorkflow.SaveEvent
           GetRoast = roastsWorkflow.GetRoast
           GetAllRoasts = roastsWorkflow.GetAllRoasts
-          GetToday = fun _ -> LocalDate.FromDateTime(System.DateTime.Today) }
+          GetToday = fun _ -> LocalDate.FromDateTime(System.DateTime.Today)
+          RabbitMqConnectionFactory = rabbitMqConnectionFactory }

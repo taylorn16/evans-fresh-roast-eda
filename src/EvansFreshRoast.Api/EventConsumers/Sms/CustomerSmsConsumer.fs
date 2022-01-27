@@ -1,5 +1,6 @@
 namespace EvansFreshRoast.Api.EventConsumers.Sms
 
+open RabbitMQ.Client
 open EvansFreshRoast.Api.EventConsumers
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Serialization.DomainEvents
@@ -11,12 +12,15 @@ open EvansFreshRoast.ReadModels
 open Microsoft.Extensions.Logging
 open EvansFreshRoast.Sms
 
-type CustomerSmsConsumer(logger: ILogger<CustomerSmsConsumer>) =
+type CustomerSmsConsumer
+    ( logger: ILogger<CustomerSmsConsumer>,
+      connectionFactory: IConnectionFactory ) =
     inherit EventConsumerBase<Customer, Event>(
         logger,
+        connectionFactory,
         "domain.events",
         "domain.events.customer",
-        "domain.events.customer.readModel",
+        "domain.events.customer.sms",
         decodeDomainEvent decodeCustomerEvent
     )
 

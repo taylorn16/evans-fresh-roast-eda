@@ -1,5 +1,6 @@
 namespace EvansFreshRoast.Api.EventConsumers.ReadModels
 
+open RabbitMQ.Client
 open EvansFreshRoast.Api.EventConsumers
 open Microsoft.Extensions.Logging
 open EvansFreshRoast.Domain
@@ -9,9 +10,12 @@ open EvansFreshRoast.Serialization.Coffee
 open EvansFreshRoast.Framework
 open EvansFreshRoast.ReadModels
 
-type CoffeeReadModelConsumer(logger: ILogger<CoffeeReadModelConsumer>) =
+type CoffeeReadModelConsumer
+    ( logger: ILogger<CoffeeReadModelConsumer>,
+      connectionFactory: IConnectionFactory ) =
     inherit EventConsumerBase<Coffee, Event>(
         logger,
+        connectionFactory,
         "domain.events",
         "domain.events.coffee",
         "domain.events.coffee.readModel",

@@ -55,6 +55,12 @@ type Invoice =
     | PaidInvoice of UsdInvoiceAmount * PaymentMethod
     | UnpaidInvoice of UsdInvoiceAmount
 
+module Invoice =
+    let getAmount =
+        function
+        | PaidInvoice (amt, _) -> amt
+        | UnpaidInvoice amt -> amt
+
 type OrderLineItem =
     { OrderReferenceId: CoffeeReferenceId
       Quantity: Quantity }
@@ -69,9 +75,9 @@ type Order =
     | ConfirmedOrder of OrderDetails * Invoice
 
 type RoastStatus =
-    | NotStarted
-    | InProcess
-    | Complete
+    | NotPublished
+    | Open
+    | Closed
 
 type RoastName = private RoastName of String100
 
@@ -89,7 +95,8 @@ type Roast =
       OrderByDate: LocalDate
       Orders: Order list
       Coffees: IDictionary<CoffeeReferenceId, Id<Coffee>>
-      Status: RoastStatus }
+      Status: RoastStatus
+      SentRemindersCount: NonNegativeInt }
     static member Empty =
         { Name = RoastName.create "<empty>" |> unsafeAssertOk
           Customers = List.empty
@@ -97,7 +104,8 @@ type Roast =
           OrderByDate = LocalDate.MinIsoValue
           Orders = List.empty
           Coffees = dict List.empty
-          Status = NotStarted }
+          Status = NotPublished
+          SentRemindersCount = NonNegativeInt.zero }
 
 type RoastCreated =
     { Name: RoastName
@@ -110,22 +118,30 @@ module Roast =
         | OrderCancelled of Id<Customer>
         | OrderConfirmed of Id<Customer> * UsdInvoiceAmount
         | CoffeesAdded of Id<Coffee> list
+        | CoffeesRemoved of Id<Coffee> list
         | CustomersAdded of Id<Customer> list
+        | CustomersRemoved of Id<Customer> list
         | RoastDatesChanged of roastDate: LocalDate * orderByDate: LocalDate
         | RoastStarted
         | RoastCompleted
         | Created of RoastCreated
+        | ReminderSent
+        | InvoicePaid of Id<Customer> * PaymentMethod
 
     type Command =
         | PlaceOrder of Id<Customer> * OrderLineItem list * OffsetDateTime
         | CancelOrder of Id<Customer>
         | ConfirmOrder of Id<Customer>
         | AddCoffees of Id<Coffee> list
+        | RemoveCoffees of Id<Coffee> list
         | AddCustomers of Id<Customer> list
+        | RemoveCustomers of Id<Customer> list
         | UpdateRoastDates of roastDate: LocalDate * orderByDate: LocalDate
         | StartRoast
         | CompleteRoast
         | Create of RoastCreated
+        | SendReminder
+        | PayInvoice of Id<Customer> * PaymentMethod
 
     type Error =
         | OrderByDateAfterRoastDate
@@ -133,7 +149,7 @@ module Roast =
         | RoastDatesCannotBeChangedOnceStarted
         | CustomerHasAlreadyPlacedOrder
         | CustomerNotIncludedInRoast
-        | AtLeastOneInvalidCoffeeQuantityInOrder // TODO: make this more specific
+        | AtLeastOneInvalidCoffeeQuantityInOrder // TODO: make this more specific?
         | InvalidCoffeeReferenceIdsInOrder of CoffeeReferenceId list
         | MoreThanTwentySixCoffeesInRoast
         | OrderDoesNotExist
@@ -143,6 +159,7 @@ module Roast =
         | RoastAlreadyCompleted
         | RoastNotYetStarted
         | RoastAlreadyCreated
+        | OrderNotConfirmed
 
     let getCustomerId =
         function
@@ -182,7 +199,7 @@ module Roast =
                 Error OrderByDateAfterRoastDate
             else if orderByDate <= today || roastDate <= today then
                 Error RoastDatesInPast
-            else if roast.Status <> NotStarted then
+            else if roast.Status <> NotPublished then
                 Error RoastDatesCannotBeChangedOnceStarted
             else
                 Ok <| RoastDatesChanged(roastDate, orderByDate)
@@ -266,17 +283,33 @@ module Roast =
             |> Result.map OrderPlaced
 
         | AddCoffees coffeeIds ->
-            let validCoffeeIds =
-                allCoffees
-                |> Seq.filter (fun (id, _) -> coffeeIds |> Seq.exists ((=) id))
-                |> Seq.map fst
-                |> Seq.except roast.Coffees.Values
-                |> Seq.toList
+            if roast.Status = NotPublished then
+                let validCoffeeIds =
+                    allCoffees
+                    |> Seq.filter (fun (id, _) -> coffeeIds |> Seq.exists ((=) id))
+                    |> Seq.map fst
+                    |> Seq.except roast.Coffees.Values
+                    |> Seq.toList
 
-            if roast.Coffees.Count + Seq.length validCoffeeIds > 26 then
-                Error MoreThanTwentySixCoffeesInRoast
+                if roast.Coffees.Count + Seq.length validCoffeeIds > 26 then
+                    Error MoreThanTwentySixCoffeesInRoast
+                else
+                    Ok <| CoffeesAdded validCoffeeIds
             else
-                Ok <| CoffeesAdded validCoffeeIds
+                Error RoastAlreadyStarted
+
+        | RemoveCoffees coffeeIds ->
+            if roast.Status = NotPublished then
+                let validCoffeeIds =
+                    coffeeIds
+                    |> Seq.distinct
+                    |> Seq.filter (fun id ->
+                        roast.Coffees.Values |> Seq.exists ((=) id))
+                    |> List.ofSeq
+
+                Ok <| CoffeesRemoved validCoffeeIds
+            else
+                Error RoastAlreadyStarted
 
         | CancelOrder customerId ->
             roast.Orders
@@ -299,26 +332,58 @@ module Roast =
                 | None -> Error OrderDoesNotExist
 
         | AddCustomers customerIds ->
-            let validCustomerIds =
-                allCustomers
-                |> Seq.filter (fun (id, _) -> customerIds |> Seq.exists ((=) id))
-                |> Seq.map fst
-                |> Seq.except roast.Customers
-                |> Seq.toList
+            if roast.Status = NotPublished then
+                let validCustomerIds =
+                    allCustomers
+                    |> Seq.filter (fun (id, _) -> customerIds |> Seq.exists ((=) id))
+                    |> Seq.map fst
+                    |> Seq.except roast.Customers
+                    |> Seq.toList
 
-            Ok <| CustomersAdded validCustomerIds
+                Ok <| CustomersAdded validCustomerIds
+            else
+                Error RoastAlreadyStarted
+
+        | RemoveCustomers customerIds ->
+            if roast.Status = NotPublished then
+                let validCustomerIds =
+                    customerIds
+                    |> Seq.distinct
+                    |> Seq.filter (fun id -> roast.Customers |> Seq.exists ((=) id))
+                    |> List.ofSeq
+
+                Ok <| CustomersRemoved customerIds
+            else
+                Error RoastAlreadyStarted
+
 
         | StartRoast ->
             match roast.Status with
-            | NotStarted -> Ok RoastStarted
-            | InProcess -> Error RoastAlreadyStarted
-            | Complete -> Error RoastAlreadyCompleted
+            | NotPublished -> Ok RoastStarted
+            | Open -> Error RoastAlreadyStarted
+            | Closed -> Error RoastAlreadyCompleted
 
         | CompleteRoast ->
             match roast.Status with
-            | InProcess -> Ok RoastCompleted
-            | NotStarted -> Error RoastNotYetStarted
-            | Complete -> Error RoastAlreadyCompleted
+            | Open -> Ok RoastCompleted
+            | NotPublished -> Error RoastNotYetStarted
+            | Closed -> Error RoastAlreadyCompleted
+
+        | SendReminder ->
+            match roast.Status with
+            | NotPublished -> Error RoastNotYetStarted
+            | Open -> Ok ReminderSent
+            | Closed -> Error RoastAlreadyCompleted
+
+        | PayInvoice (customerId, paymentMethod) ->
+            roast.Orders
+            |> List.tryFind (getCustomerId >> (=) customerId)
+            |> Result.ofOption OrderDoesNotExist
+            |> Result.bind (
+                function
+                | UnconfirmedOrder _ -> Error OrderNotConfirmed
+                | ConfirmedOrder _ -> Ok <| InvoicePaid(customerId, paymentMethod)
+            )
 
     let apply roast event =
         match event with
@@ -341,23 +406,18 @@ module Roast =
         | OrderConfirmed(customerId, invoiceAmt) ->
             let confirmedOrder =
                 roast.Orders
-                |> List.tryFind (getCustomerId >> (=) customerId)
-                |> Option.map (
-                    function
+                |> List.find (getCustomerId >> (=) customerId)
+                |> function
                     | UnconfirmedOrder details ->
                         ConfirmedOrder(details, UnpaidInvoice invoiceAmt)
                     | ConfirmedOrder(details, invoice) ->
                         ConfirmedOrder(details, invoice)
-                )
-
-            let appendOrders =
-                [ if confirmedOrder.IsSome then confirmedOrder.Value ]
 
             { roast with
                 Orders =
                     roast.Orders
                     |> List.filter (getCustomerId >> (<>) customerId)
-                    |> List.append appendOrders }
+                    |> List.append [ confirmedOrder ] }
 
         | CoffeesAdded coffeeIds ->
             let getNextCoffeeReferenceIds alreadyUsedReferenceIds count =
@@ -388,6 +448,10 @@ module Roast =
                     )
                     |> dict }
 
+        | CoffeesRemoved coffeeIds ->
+            { roast with
+                Coffees = roast.Coffees } // TODO: recompute the coffee reference Ids
+
         | CustomersAdded customerIds ->
             { roast with
                 Customers =
@@ -396,14 +460,39 @@ module Roast =
                     |> Seq.distinct
                     |> Seq.toList }
 
+        | CustomersRemoved customerIds ->
+            { roast with
+                Customers =
+                    roast.Customers
+                    |> List.filter (fun id -> customerIds |> (List.tryFind ((=) id)) = None) }
+
         | RoastDatesChanged (roastDate, orderByDate) ->
             { roast with
                 RoastDate = roastDate
                 OrderByDate = orderByDate }
 
-        | RoastStarted -> { roast with Status = InProcess }
+        | RoastStarted -> { roast with Status = Open }
 
-        | RoastCompleted -> { roast with Status = Complete }
+        | RoastCompleted -> { roast with Status = Closed }
+
+        | ReminderSent ->
+            { roast with
+                SentRemindersCount = NonNegativeInt.increment roast.SentRemindersCount }
+
+        | InvoicePaid (customerId, paymentMethod) ->
+            let paidOrder =
+                roast.Orders
+                |> List.find (getCustomerId >> (=) customerId)
+                |> function
+                    | ConfirmedOrder(details, invoice) ->
+                        ConfirmedOrder(details, PaidInvoice(Invoice.getAmount invoice, paymentMethod))
+                    | UnconfirmedOrder _ ->
+                        failwith "This should never, ever happen."
+
+            { roast with
+                Orders = roast.Orders
+                         |> List.filter (getCustomerId >> (<>) customerId)
+                         |> List.append [ paidOrder ] }
 
     let createAggregate allCustomers allCoffees today =
         { Empty = Roast.Empty
