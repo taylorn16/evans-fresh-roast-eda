@@ -1,5 +1,6 @@
 namespace EvansFreshRoast.Api.Composition.Leaves
 
+open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Customer
@@ -8,14 +9,14 @@ open EvansFreshRoast.EventStore.Customer
 open EvansFreshRoast.ReadModels.CustomerRepository
 
 type CustomerWorkflowDependencies =
-    { LoadEvents: Id<Customer> -> Async<Result<DomainEvent<Customer, Event> list, EventStoreError>>
-      SaveEvent: DomainEvent<Customer, Event> -> Async<Result<unit, EventStoreError>>
-      GetCustomer: Id<Customer> -> Async<option<Id<Customer> * Customer>>
-      GetAllCustomers: Async<list<Id<Customer> * Customer>> }
+    { LoadEvents: LoadEvents<Customer, Event, EventStoreError>
+      SaveEvent: SaveEvent<Customer, Event, EventStoreError>
+      GetCustomer: LoadAggregate<Customer>
+      GetAllCustomers: LoadAllAggregates<Customer> }
 
 module Customers =
     let compose eventStoreConnectionString readStoreConnectionString =
         { LoadEvents = loadCustomerEvents eventStoreConnectionString
           SaveEvent = saveCustomerEvent eventStoreConnectionString
           GetCustomer = getCustomer readStoreConnectionString
-          GetAllCustomers = getAllCustomers readStoreConnectionString }
+          GetAllCustomers = fun () -> getAllCustomers readStoreConnectionString }

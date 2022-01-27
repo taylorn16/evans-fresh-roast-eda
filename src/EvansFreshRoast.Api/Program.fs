@@ -8,7 +8,6 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
-open EvansFreshRoast.Api.HttpHandlers
 open System.Text.Json
 open NodaTime.Serialization.SystemTextJson
 open NodaTime
@@ -24,9 +23,9 @@ open EvansFreshRoast.Api
 
 let webApp (compositionRoot: CompositionRoot) =
     choose [
-        subRoute "/api/v1/coffees" (Coffees.Router.getRouter compositionRoot)
-        subRoute "/api/v1/customers" (customerRoutes compositionRoot)
-        subRoute "/api/v1/roasts" (roastRoutes compositionRoot)
+        subRoute "/api/v1/coffees" (Coffees.Router.router compositionRoot)
+        subRoute "/api/v1/customers" (Customers.Router.router compositionRoot)
+        subRoute "/api/v1/roasts" (Roasts.Router.router compositionRoot)
         setStatusCode 404 >=> text "Not Found"
     ]
 

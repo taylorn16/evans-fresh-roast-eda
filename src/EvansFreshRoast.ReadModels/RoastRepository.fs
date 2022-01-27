@@ -290,3 +290,13 @@ module RoastRepository =
                 with
                 | _ -> return Error "Error updating roast status."
             }
+
+    let getRoast connectionString roastId =
+        async {
+            return None
+        }
+
+    let getAllRoasts connectionString =
+        async {
+            return []
+        }
