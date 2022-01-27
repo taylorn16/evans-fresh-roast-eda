@@ -5,7 +5,8 @@
 - roast read model event consumer
 - rename and reorganize Utils project
 - flesh out rest of customers api
-- Error handling/messaging/logginc -- basically everywhere!
+- Error handling/messaging/logging -- basically everywhere!
+- Split up roast domain file into several modules
 
 ## Roasts API
 

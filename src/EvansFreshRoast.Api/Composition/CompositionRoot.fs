@@ -4,6 +4,7 @@ open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.EventStore
 open EvansFreshRoast.Api
+open EvansFreshRoast.Utils
 open NodaTime
 open RabbitMQ.Client
 
@@ -21,7 +22,9 @@ type CompositionRoot =
       GetRoast: LoadAggregate<Roast>
       GetAllRoasts: LoadAllAggregates<Roast>
       GetToday: unit -> LocalDate
-      RabbitMqConnectionFactory: IConnectionFactory }
+      RabbitMqConnectionFactory: IConnectionFactory
+      TwilioFromPhoneNumber: UsPhoneNumber
+      ReadStoreConnectionString: ConnectionString }
     member this.CustomerCommandHandler with get () =
         Aggregate.createHandler
             Customer.aggregate
@@ -89,4 +92,6 @@ module CompositionRoot =
           GetRoast = roastsWorkflow.GetRoast
           GetAllRoasts = roastsWorkflow.GetAllRoasts
           GetToday = fun _ -> LocalDate.FromDateTime(System.DateTime.Today)
-          RabbitMqConnectionFactory = rabbitMqConnectionFactory }
+          RabbitMqConnectionFactory = rabbitMqConnectionFactory
+          TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk
+          ReadStoreConnectionString = readStoreConnectionString }

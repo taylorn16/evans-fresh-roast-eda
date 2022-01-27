@@ -180,6 +180,16 @@ module Roast =
             price * qty)
         |> UsdInvoiceAmount.create
 
+    let withReferenceIds (coffeeIds: Id<Coffee> seq) =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        |> Seq.map (
+            string
+            >> CoffeeReferenceId.create
+            >> unsafeAssertOk
+        )
+        |> Seq.zip coffeeIds
+        |> Seq.map (fun (id, refId) -> refId, id)
+
     let execute
         (allCustomers: seq<Id<Customer> * Customer>)
         (allCoffees: seq<Id<Coffee> * Coffee>)
@@ -338,6 +348,7 @@ module Roast =
                     |> Seq.filter (fun (id, _) -> customerIds |> Seq.exists ((=) id))
                     |> Seq.map fst
                     |> Seq.except roast.Customers
+                    |> Seq.distinct
                     |> Seq.toList
 
                 Ok <| CustomersAdded validCustomerIds
@@ -352,10 +363,9 @@ module Roast =
                     |> Seq.filter (fun id -> roast.Customers |> Seq.exists ((=) id))
                     |> List.ofSeq
 
-                Ok <| CustomersRemoved customerIds
+                Ok <| CustomersRemoved validCustomerIds
             else
                 Error RoastAlreadyStarted
-
 
         | StartRoast ->
             match roast.Status with
@@ -420,37 +430,24 @@ module Roast =
                     |> List.append [ confirmedOrder ] }
 
         | CoffeesAdded coffeeIds ->
-            let getNextCoffeeReferenceIds alreadyUsedReferenceIds count =
-                let usedChars =
-                    alreadyUsedReferenceIds
-                    |> Seq.map (CoffeeReferenceId.value >> char)
+            let newCoffeesDict =
+                roast.Coffees.Values
+                |> Seq.append coffeeIds
+                |> Seq.distinct
+                |> withReferenceIds
+                |> dict
 
-                let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-                alphabet
-                |> Seq.except usedChars
-                |> Seq.take count
-                |> Seq.map (
-                    string
-                    >> CoffeeReferenceId.create
-                    >> (function
-                    | Ok id -> id
-                    | Error e -> failwith (sprintf "failed to create reference id, %A" e))
-                )
-
-            { roast with
-                Coffees =
-                    coffeeIds
-                    |> Seq.zip (getNextCoffeeReferenceIds roast.Coffees.Keys coffeeIds.Length)
-                    |> Seq.append (
-                        roast.Coffees
-                        |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
-                    )
-                    |> dict }
+            { roast with Coffees = newCoffeesDict }
 
         | CoffeesRemoved coffeeIds ->
-            { roast with
-                Coffees = roast.Coffees } // TODO: recompute the coffee reference Ids
+            let newCoffeesDict =
+                roast.Coffees.Values
+                |> Seq.except coffeeIds
+                |> Seq.distinct
+                |> withReferenceIds
+                |> dict
+
+            { roast with Coffees = newCoffeesDict }
 
         | CustomersAdded customerIds ->
             { roast with

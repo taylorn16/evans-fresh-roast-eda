@@ -3,7 +3,8 @@ namespace EvansFreshRoast.Api
 [<CLIMutable>]
 type Twilio =
   { AccountSid: string
-    AuthToken: string }
+    AuthToken: string
+    FromPhoneNumber: string }
 
 [<CLIMutable>]
 type RabbitMq =
