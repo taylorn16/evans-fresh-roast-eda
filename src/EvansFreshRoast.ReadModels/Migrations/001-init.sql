@@ -24,6 +24,7 @@ CREATE TABLE roasts(
   , customer_ids UUID[] NOT NULL
   , coffee_ids UUID[] NOT NULL
   , roast_status TEXT NOT NULL
+  , reminders_sent_count INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE orders(
