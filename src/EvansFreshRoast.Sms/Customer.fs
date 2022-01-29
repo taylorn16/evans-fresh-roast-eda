@@ -27,7 +27,7 @@ let handleEvent
             return! customer
             |> Option.map (fun (_, cust) ->
                 $"Alright, {cust.Name}! You're officially signed up to receive updates. "
-                + "Just text me UNSUBSCRIBE at any time to opt-out of receiving further updates."
+                + "Just text me UNSUBSCRIBE at any time to opt-out of receiving further texts."
                 |> SmsMsg.create
                 |> unsafeAssertOk
                 |> sendSms cust.PhoneNumber)

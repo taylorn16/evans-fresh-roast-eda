@@ -1,4 +1,4 @@
-module EvansFreshRoast.Api
+namespace EvansFreshRoast.Api
 
 open System
 open Microsoft.AspNetCore.Builder
@@ -18,100 +18,102 @@ open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Api
 open RabbitMQ.Client
 
-// ---------------------------------
-// Web app
-// ---------------------------------
 
-let webApp (compositionRoot: CompositionRoot) =
-    choose [
-        subRoute "/api/v1/coffees" (Coffees.Router.router compositionRoot)
-        subRoute "/api/v1/customers" (Customers.Router.router compositionRoot)
-        subRoute "/api/v1/roasts" (Roasts.Router.router compositionRoot)
-        subRoute "/api/v1/_twiliosms/" (Sms.Router.router compositionRoot)
-        setStatusCode 404 >=> text "Not Found"
-    ]
+module Program =
+    // ---------------------------------
+    // Web app
+    // ---------------------------------
 
-// ---------------------------------
-// Error handler
-// ---------------------------------
+    let webApp (compositionRoot: CompositionRoot) =
+        choose [
+            subRoute "/api/v1/coffees" (Coffees.Router.router compositionRoot)
+            subRoute "/api/v1/customers" (Customers.Router.router compositionRoot)
+            subRoute "/api/v1/roasts" (Roasts.Router.router compositionRoot)
+            subRoute "/api/v1/_twiliosms/" (Sms.Router.router compositionRoot)
+            setStatusCode 404 >=> text "Not Found"
+        ]
 
-let errorHandler (ex: Exception) (logger: ILogger) =
-    logger.LogError(ex, "An unhandled exception has occurred while executing the request.")
+    // ---------------------------------
+    // Error handler
+    // ---------------------------------
 
-    clearResponse
-    >=> setStatusCode 500
-    >=> text ex.Message
+    let errorHandler (ex: Exception) (logger: ILogger) =
+        logger.LogError(ex, "An unhandled exception has occurred while executing the request.")
 
-// ---------------------------------
-// Config and Main
-// ---------------------------------
+        clearResponse
+        >=> setStatusCode 500
+        >=> text ex.Message
 
-let configureCors (builder: CorsPolicyBuilder) =
-    builder
-        .WithOrigins("http://localhost:5000", "https://localhost:5001")
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-    |> ignore
+    // ---------------------------------
+    // Config and Main
+    // ---------------------------------
 
-let configureApp (compositionRoot: CompositionRoot) (app: IApplicationBuilder) =
-    let env =
-        app.ApplicationServices.GetService<IWebHostEnvironment>()
+    let configureCors (builder: CorsPolicyBuilder) =
+        builder
+            .WithOrigins("http://localhost:5000", "https://localhost:5001")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+        |> ignore
 
-    (match env.IsDevelopment() with
-     | true -> app.UseDeveloperExceptionPage()
-     | false ->
-         app
-             .UseGiraffeErrorHandler(errorHandler)
-             .UseHttpsRedirection())
-        .UseCors(configureCors)
-        .UseGiraffe(webApp compositionRoot)
+    let configureApp (compositionRoot: CompositionRoot) (app: IApplicationBuilder) =
+        let env =
+            app.ApplicationServices.GetService<IWebHostEnvironment>()
 
-let configureServices (compositionRoot: CompositionRoot) (services: IServiceCollection) =
-    services.AddSingleton<CompositionRoot>(compositionRoot) |> ignore
-    services.AddSingleton<IConnectionFactory>(fun sp ->
-        sp.GetRequiredService<CompositionRoot>().RabbitMqConnectionFactory) |> ignore
-    services.AddHostedService<CustomerReadModelConsumer>() |> ignore
-    services.AddHostedService<CoffeeReadModelConsumer>() |> ignore
-    services.AddHostedService<RoastReadModelConsumer>() |> ignore
-    services.AddHostedService<CustomerSmsConsumer>() |> ignore
-    services.AddCors() |> ignore
-    services.AddGiraffe() |> ignore
+        (match env.IsDevelopment() with
+        | true -> app.UseDeveloperExceptionPage()
+        | false ->
+            app
+                .UseGiraffeErrorHandler(errorHandler)
+                .UseHttpsRedirection())
+            .UseCors(configureCors)
+            .UseGiraffe(webApp compositionRoot)
 
-    let serializerOptions =
-        let opts =
-            JsonSerializerOptions().ConfigureForNodaTime(DateTimeZoneProviders.Tzdb)
-        opts.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
-        opts
+    let configureServices (compositionRoot: CompositionRoot) (services: IServiceCollection) =
+        services.AddSingleton<CompositionRoot>(compositionRoot) |> ignore
+        services.AddSingleton<IConnectionFactory>(fun sp ->
+            sp.GetRequiredService<CompositionRoot>().RabbitMqConnectionFactory) |> ignore
+        services.AddHostedService<CustomerReadModelConsumer>() |> ignore
+        services.AddHostedService<CoffeeReadModelConsumer>() |> ignore
+        services.AddHostedService<RoastReadModelConsumer>() |> ignore
+        services.AddHostedService<CustomerSmsConsumer>() |> ignore
+        services.AddCors() |> ignore
+        services.AddGiraffe() |> ignore
 
-    services.AddSingleton<Json.ISerializer>(SystemTextJson.Serializer(serializerOptions))
-    |> ignore
+        let serializerOptions =
+            let opts =
+                JsonSerializerOptions().ConfigureForNodaTime(DateTimeZoneProviders.Tzdb)
+            opts.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
+            opts
 
-    ()
+        services.AddSingleton<Json.ISerializer>(SystemTextJson.Serializer(serializerOptions))
+        |> ignore
 
-let configureLogging (builder: ILoggingBuilder) =
-    builder.AddConsole().AddDebug() |> ignore
+        ()
 
-let configureSettings (configurationBuilder: IConfigurationBuilder) =
-    configurationBuilder
-        .SetBasePath(AppContext.BaseDirectory)
-        .AddJsonFile("appsettings.json", optional=false)
-        .AddEnvironmentVariables()
+    let configureLogging (builder: ILoggingBuilder) =
+        builder.AddConsole().AddDebug() |> ignore
 
-[<EntryPoint>]
-let main args =
-    let confBuilder = configureSettings <| ConfigurationBuilder()
-    let settings = confBuilder.Build().Get<Settings>()
-    let compositionRoot = CompositionRoot.compose settings
+    let configureSettings (configurationBuilder: IConfigurationBuilder) =
+        configurationBuilder
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional=false)
+            .AddEnvironmentVariables()
 
-    Host
-        .CreateDefaultBuilder(args)
-        .ConfigureWebHostDefaults(fun webHostBuilder ->
-            webHostBuilder
-                .Configure(Action<IApplicationBuilder> (configureApp compositionRoot))
-                .ConfigureServices(Action<IServiceCollection> (configureServices compositionRoot))
-                .ConfigureLogging(configureLogging)
-            |> ignore)
-        .Build()
-        .Run()
+    [<EntryPoint>]
+    let main args =
+        let confBuilder = configureSettings <| ConfigurationBuilder()
+        let settings = confBuilder.Build().Get<Settings>()
+        let compositionRoot = CompositionRoot.compose settings
 
-    0
+        Host
+            .CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(fun webHostBuilder ->
+                webHostBuilder
+                    .Configure(Action<IApplicationBuilder> (configureApp compositionRoot))
+                    .ConfigureServices(Action<IServiceCollection> (configureServices compositionRoot))
+                    .ConfigureLogging(configureLogging)
+                |> ignore)
+            .Build()
+            .Run()
+
+        0

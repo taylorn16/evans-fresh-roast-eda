@@ -1,6 +1,4 @@
 - JWT Authentication
-- Incoming SMS webhook/parsing
-- handler wrapper for incoming ids??
 - rename and reorganize Utils project
 - flesh out rest of customers api
 - Error handling/messaging/logging -- basically everywhere!
@@ -36,12 +34,10 @@
 
 ### Ordering
 
-- In the format, e.g. (newlines)
+- In the format:
 2 A
 1 B
 2 D
-- OR (semicolons)
-2 A; 1 B; 2 D
 
 - Text will respond with a price/summary and ask them to confirm
 - When the roast is closed, a notification text will be sent
