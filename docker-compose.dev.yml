@@ -5,21 +5,21 @@ services:
     build: ./src
     ports:
       - "8080:80"
-    mem_limit: 1024m
+    mem_limit: 528m
     cpus: 0.5
 
   eventstoredb:
     build: ./src/EvansFreshRoast.EventStore
     ports:
       - "5432:5432"
-    mem_limit: 528m
+    mem_limit: 256m
     cpus: 0.25
 
   readmodelsdb:
     build: ./src/EvansFreshRoast.ReadModels
     ports:
       - "2345:5432"
-    mem_limit: 528m
+    mem_limit: 256m
     cpus: 0.25
 
   rabbitmq:
@@ -27,5 +27,5 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    mem_limit: 1024m
+    mem_limit: 528m
     cpus: 0.25

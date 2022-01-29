@@ -272,6 +272,7 @@ let getRoasts (compositionRoot: CompositionRoot): HttpHandler =
                     |> List.map (fun (coffeeId, coffeeName) ->
                         coffeeId |> Id.value, coffeeName |> CoffeeName.value) })
 
+        // TODO: coffee id/name tuples are being encoded oddly
         return! Successful.OK roastDtos next ctx
     }
 
@@ -284,7 +285,7 @@ let getRoast (compositionRoot: CompositionRoot) id: HttpHandler =
 
         match roast with
         | Some roast' ->
-            // TODO: map to RoastDetailedDto
+            // TODO: map to RoastDetailedDto!
             return! Successful.OK roast' next ctx
 
         | None ->

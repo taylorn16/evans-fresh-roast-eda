@@ -7,6 +7,7 @@ open Giraffe
 let router (compositionRoot: CompositionRoot) = choose [
     GET >=> choose [
         routeCix "(/?)" >=> getRoasts compositionRoot
+        routeCif "/%O" (getRoast compositionRoot)
     ]
     POST >=> choose [
         routeCix "(/?)" >=> postRoast compositionRoot

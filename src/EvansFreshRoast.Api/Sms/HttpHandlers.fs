@@ -45,7 +45,7 @@ let receiveIncomingSms (compositionRoot: CompositionRoot): HttpHandler =
                             let response = Twilio.TwiML.MessagingResponse()
                             response.Message($"Something went wrong: {handlerErr}") |> ignore
 
-                            return! Successful.OK (response.ToString()) next ctx
+                            return! Successful.OK (response.ToString()) next ctx // TODO: how do XML?
 
                     | CustomerCommand(customerId, customerCmd) ->
                         let handleCommand = compositionRoot.CustomerCommandHandler

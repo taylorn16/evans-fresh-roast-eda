@@ -29,7 +29,7 @@ module Program =
             subRoute "/api/v1/coffees" (Coffees.Router.router compositionRoot)
             subRoute "/api/v1/customers" (Customers.Router.router compositionRoot)
             subRoute "/api/v1/roasts" (Roasts.Router.router compositionRoot)
-            subRoute "/api/v1/_twiliosms/" (Sms.Router.router compositionRoot)
+            subRoute "/api/v1/_twiliosms" (Sms.Router.router compositionRoot)
             setStatusCode 404 >=> text "Not Found"
         ]
 
