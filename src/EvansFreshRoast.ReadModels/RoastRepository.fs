@@ -581,12 +581,12 @@ module RoastRepository =
                   , roast_name
                   , roast_date
                   , order_by_date
-                  , ARRAY_LENGTH(customer_ids, 1) AS customers_count
+                  , COALESCE(ARRAY_LENGTH(customer_ids, 1), 0) AS customers_count
                   , coffee_ids
                   , roast_status
                   , COUNT(order_id) AS orders_count
                 FROM roasts
-                JOIN orders ON roast_fk = roast_id
+                LEFT JOIN orders ON roast_fk = roast_id
                 GROUP BY roast_id
                 """
             |> Sql.executeAsync (fun row ->

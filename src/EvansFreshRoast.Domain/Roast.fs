@@ -222,12 +222,12 @@ module Roast =
         (allCustomers: seq<Id<Customer> * Customer>)
         (allCoffees: seq<Id<Coffee> * Coffee>)
         (today: LocalDate)
-        roast
+        (roast: Roast)
         cmd
         =
         match cmd with
         | Create fields ->
-            if roast <> Roast.Empty then
+            if RoastName.value roast.Name <> "<empty>" then
                 Error RoastAlreadyCreated
             else
                 Ok <| Created fields

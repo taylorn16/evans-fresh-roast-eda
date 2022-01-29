@@ -47,8 +47,8 @@ let decodeLocalDate: Decoder<LocalDate> =
 
         if matches.Success then
             let year = s.Substring(0, 4) |> int
-            let month = s.Substring(4, 2) |> int
-            let day = s.Substring(2, 6) |> int
+            let month = s.Substring(5, 2) |> int
+            let day = s.Substring(8, 2) |> int
 
             Decode.succeed (LocalDate(year, month, day))
         else

@@ -193,7 +193,9 @@ module CustomerRepository =
     let getAllCustomers connectionString =
         let sql =
             """
-            SELECT customer_id, cusomter_data
+            SELECT
+                customer_id
+              , customer_data
             FROM customers
             """
 
