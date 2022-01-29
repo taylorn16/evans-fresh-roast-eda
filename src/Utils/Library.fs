@@ -17,6 +17,11 @@ module Result =
         | Ok _ -> true
         | Error _ -> false
 
+    let unsafeAssertError =
+        function
+        | Error e -> e
+        | _ -> failwith "You asserted Error, but it was Ok."
+
     let unsafeAssertOk res =
         match res with
         | Ok a -> a

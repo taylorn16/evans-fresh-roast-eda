@@ -38,11 +38,14 @@ module UsPhoneNumber =
 
     let value = apply id
 
+    let formatE164 phn =
+        let fmt (s: string) = sprintf "+1%s" s
+        apply fmt phn
+
     let format phn =
         let fmt (s: string) =
             sprintf "(%s) %s-%s" (s.Substring(0, 3)) (s.Substring(3, 3)) (s.Substring(6, 4))
-
-        phn |> apply fmt
+        apply fmt phn
 
 type Customer =
     { Name: CustomerName

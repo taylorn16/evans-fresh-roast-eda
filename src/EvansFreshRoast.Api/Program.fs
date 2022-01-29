@@ -27,6 +27,7 @@ let webApp (compositionRoot: CompositionRoot) =
         subRoute "/api/v1/coffees" (Coffees.Router.router compositionRoot)
         subRoute "/api/v1/customers" (Customers.Router.router compositionRoot)
         subRoute "/api/v1/roasts" (Roasts.Router.router compositionRoot)
+        subRoute "/api/v1/_twiliosms/" (Sms.Router.router compositionRoot)
         setStatusCode 404 >=> text "Not Found"
     ]
 
@@ -94,6 +95,7 @@ let configureSettings (configurationBuilder: IConfigurationBuilder) =
     configurationBuilder
         .SetBasePath(AppContext.BaseDirectory)
         .AddJsonFile("appsettings.json", optional=false)
+        .AddEnvironmentVariables()
 
 [<EntryPoint>]
 let main args =

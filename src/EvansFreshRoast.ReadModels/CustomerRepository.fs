@@ -155,6 +155,41 @@ module CustomerRepository =
             )
         }
 
+    let getCustomerByPhoneNumber connectionString (phoneNumber: UsPhoneNumber) =
+        let sql =
+            """
+            SELECT customer_id, customer_data
+            FROM customers
+            WHERE customer_data ->> 'phoneNumber' = @phoneNumber
+            LIMIT 1
+            """
+
+        async {
+            return! ConnectionString.value connectionString
+            |> Sql.connect
+            |> Sql.query sql
+            |> Sql.parameters [ "phoneNumber", Sql.string <| UsPhoneNumber.value phoneNumber ]
+            |> Sql.executeAsync (fun row ->
+                let createRow cust id =
+                    {| customer = cust
+                       id = id |}
+
+                let customer =
+                    row.string "customer_data" |> Decode.fromString decodeCustomer
+                    
+                let id: Result<Id<Customer>, string> =
+                    row.uuid "customer_id" |> Id.create |> Result.mapError string
+
+                createRow <!> customer <*> id)
+            |> Async.AwaitTask
+            |> Async.map (
+                List.take 1
+                >> List.tryHead
+                >> Option.bind Result.toOption
+                >> Option.map (fun row -> row.id, row.customer)
+            )
+        }
+
     let getAllCustomers connectionString =
         let sql =
             """

@@ -7,12 +7,6 @@
 - Split up roast domain file into several modules
 - refactor/split up roast repository functions into several modules
 
-## Roasts API
-
-GET /api/v1/roasts/{roast_id}
-- Get a specific roast
-- Detailed view (customers, coffees, orders & associated invoices)
-
 ## Incoming SMS Webhook Mappings
 
 ### "SUBSCRIBE"

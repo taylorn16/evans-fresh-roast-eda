@@ -9,6 +9,7 @@
     <PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.2.2" />
     <PackageReference Include="Twilio" Version="5.70.0" />
+    <PackageReference Include="Twilio.AspNet.Core" Version="5.68.3" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Settings.fs" />
@@ -28,6 +29,8 @@
     <Compile Include="Roasts/RequestDecoders.fs" />
     <Compile Include="Roasts/HttpHandlers.fs" />
     <Compile Include="Roasts/Router.fs" />
+    <Compile Include="Sms/HttpHandlers.fs" />
+    <Compile Include="Sms/Router.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
     <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />

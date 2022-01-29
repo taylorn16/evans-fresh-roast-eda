@@ -12,11 +12,13 @@ type CustomerWorkflowDependencies =
     { LoadEvents: LoadEvents<Customer, Event, EventStoreError>
       SaveEvent: SaveEvent<Customer, Event, EventStoreError>
       GetCustomer: LoadAggregate<Customer>
-      GetAllCustomers: LoadAllAggregates<Customer> }
+      GetAllCustomers: LoadAllAggregates<Customer>
+      GetCustomerByPhoneNumber: UsPhoneNumber -> Async<option<Id<Customer> * Customer>> }
 
 module Customers =
     let compose eventStoreConnectionString readStoreConnectionString =
         { LoadEvents = loadCustomerEvents eventStoreConnectionString
           SaveEvent = saveCustomerEvent eventStoreConnectionString
           GetCustomer = getCustomer readStoreConnectionString
-          GetAllCustomers = fun () -> getAllCustomers readStoreConnectionString }
+          GetAllCustomers = fun () -> getAllCustomers readStoreConnectionString
+          GetCustomerByPhoneNumber = getCustomerByPhoneNumber readStoreConnectionString }

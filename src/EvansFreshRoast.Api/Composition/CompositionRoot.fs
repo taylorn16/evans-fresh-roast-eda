@@ -14,6 +14,7 @@ type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
       SaveCustomerEvent: SaveEvent<Customer, Customer.Event, EventStoreError>
       GetCustomer: LoadAggregate<Customer>
+      GetCustomerByPhoneNumber: UsPhoneNumber -> Async<option<Id<Customer> * Customer>>
       GetAllCustomers: LoadAllAggregates<Customer>
       LoadCoffeeEvents: LoadEvents<Coffee, Coffee.Event, EventStoreError>
       SaveCoffeeEvent: SaveEvent<Coffee, Coffee.Event, EventStoreError>
@@ -24,6 +25,7 @@ type CompositionRoot =
       GetRoast: Id<Roast> -> Async<option<RoastDetailedView>>
       GetAllRoasts: unit -> Async<list<RoastSummaryView>>
       GetToday: unit -> LocalDate
+      GetNow: unit -> OffsetDateTime
       RabbitMqConnectionFactory: IConnectionFactory
       TwilioFromPhoneNumber: UsPhoneNumber
       ReadStoreConnectionString: ConnectionString }
@@ -88,6 +90,7 @@ module CompositionRoot =
           SaveCustomerEvent = customersWorkflow.SaveEvent
           GetCustomer = customersWorkflow.GetCustomer
           GetAllCustomers = customersWorkflow.GetAllCustomers
+          GetCustomerByPhoneNumber = customersWorkflow.GetCustomerByPhoneNumber
           LoadCoffeeEvents = coffeesWorkflow.LoadEvents
           SaveCoffeeEvent = coffeesWorkflow.SaveEvent
           GetCoffee = coffeesWorkflow.GetCoffee
@@ -97,6 +100,7 @@ module CompositionRoot =
           GetRoast = roastsWorkflow.GetRoast
           GetAllRoasts = fun _ -> roastsWorkflow.GetAllRoasts coffeesWorkflow.GetAllCoffees
           GetToday = fun _ -> LocalDate.FromDateTime(System.DateTime.Today)
+          GetNow = fun _ -> OffsetDateTime.FromDateTimeOffset(System.DateTimeOffset.Now)
           RabbitMqConnectionFactory = rabbitMqConnectionFactory
           TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk
           ReadStoreConnectionString = readStoreConnectionString }
