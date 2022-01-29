@@ -122,7 +122,7 @@ module Roast =
         | CustomersAdded of Id<Customer> list
         | CustomersRemoved of Id<Customer> list
         | RoastDatesChanged of roastDate: LocalDate * orderByDate: LocalDate
-        | RoastStarted
+        | RoastStarted of summary: string
         | RoastCompleted
         | Created of RoastCreated
         | ReminderSent
@@ -160,6 +160,7 @@ module Roast =
         | RoastNotYetStarted
         | RoastAlreadyCreated
         | OrderNotConfirmed
+        | AnotherRoastIsOpen
 
     let getCustomerId =
         function
@@ -190,7 +191,34 @@ module Roast =
         |> Seq.zip coffeeIds
         |> Seq.map (fun (id, refId) -> refId, id)
 
+    let onlyIfRoastIsOpen roast =
+        roast.Status
+        |> function
+            | Open -> Ok roast
+            | Closed -> Error RoastAlreadyCompleted
+            | NotPublished -> Error RoastNotYetStarted
+
+    let getOfferedCoffeeSummary (allCoffees: seq<Id<Coffee> * Coffee>) roast =
+        let getSummary (referenceId, (_, coffee: Coffee)) =
+            let name = CoffeeName.value coffee.Name
+            let price = UsdPrice.value coffee.PricePerBag
+            let weight = OzWeight.value coffee.WeightPerBag
+
+            let description =
+                CoffeeDescription.value coffee.Description
+
+            $"{CoffeeReferenceId.value referenceId}: {name} ({price:C} per {weight:N} oz bag) — {description}"
+
+        roast.Coffees
+        |> Seq.sortBy (fun kvp -> CoffeeReferenceId.value kvp.Key)
+        |> Seq.map (
+            (fun kvp -> kvp.Key, allCoffees |> Seq.find (fst >> ((=) kvp.Value)))
+            >> getSummary
+        )
+        |> Seq.fold (fun a b -> a + b + "\n") ""
+
     let execute
+        (allRoasts: seq<Id<Roast> * RoastStatus>)
         (allCustomers: seq<Id<Customer> * Customer>)
         (allCoffees: seq<Id<Coffee> * Coffee>)
         (today: LocalDate)
@@ -199,10 +227,10 @@ module Roast =
         =
         match cmd with
         | Create fields ->
-            if roast = Roast.Empty then
-                Ok <| Created fields
-            else
+            if roast <> Roast.Empty then
                 Error RoastAlreadyCreated
+            else
+                Ok <| Created fields
 
         | UpdateRoastDates (roastDate, orderByDate) ->
             if orderByDate >= roastDate then
@@ -286,6 +314,7 @@ module Roast =
                       LineItems = dict })
 
             Ok roast
+            |> Result.bind onlyIfRoastIsOpen
             |> Result.bind onlyIfCustomerDidNotAlreadyOrder
             |> Result.bind onlyIfCustomerIsPartOfRoast
             |> Result.bind onlyIfAllCoffeesAreValidChoices
@@ -322,24 +351,30 @@ module Roast =
                 Error RoastAlreadyStarted
 
         | CancelOrder customerId ->
-            roast.Orders
-            |> Seq.tryFind (getCustomerId >> ((=) customerId))
-            |> function
-                | Some _ -> Ok <| OrderCancelled customerId
-                | None -> Error OrderDoesNotExist
+            Ok roast
+            |> Result.bind onlyIfRoastIsOpen
+            |> Result.bind (fun _ ->
+                roast.Orders
+                |> Seq.tryFind (getCustomerId >> ((=) customerId))
+                |> function
+                    | Some _ -> Ok <| OrderCancelled customerId
+                    | None -> Error OrderDoesNotExist)
 
         | ConfirmOrder customerId ->
-            roast.Orders
-            |> Seq.tryFind (getCustomerId >> ((=) customerId))
-            |> function
-                | Some order ->
-                    match order with
-                    | ConfirmedOrder _ -> Error OrderAlreadyConfirmed
-                    | UnconfirmedOrder details ->
-                        match getInvoiceAmt allCoffees details with
-                        | Ok invoiceAmt -> Ok <| OrderConfirmed(customerId, invoiceAmt)
-                        | Error _ -> Error OrderWouldResultInInvalidInvoiceAmount
-                | None -> Error OrderDoesNotExist
+            Ok roast
+            |> Result.bind onlyIfRoastIsOpen
+            |> Result.bind (fun _ ->
+                roast.Orders
+                |> Seq.tryFind (getCustomerId >> ((=) customerId))
+                |> function
+                    | Some order ->
+                        match order with
+                        | ConfirmedOrder _ -> Error OrderAlreadyConfirmed
+                        | UnconfirmedOrder details ->
+                            match getInvoiceAmt allCoffees details with
+                            | Ok invoiceAmt -> Ok <| OrderConfirmed(customerId, invoiceAmt)
+                            | Error _ -> Error OrderWouldResultInInvalidInvoiceAmount
+                    | None -> Error OrderDoesNotExist)
 
         | AddCustomers customerIds ->
             if roast.Status = NotPublished then
@@ -368,10 +403,16 @@ module Roast =
                 Error RoastAlreadyStarted
 
         | StartRoast ->
-            match roast.Status with
-            | NotPublished -> Ok RoastStarted
-            | Open -> Error RoastAlreadyStarted
-            | Closed -> Error RoastAlreadyCompleted
+            if allRoasts |> Seq.exists (snd >> (=) Open) then
+                Error AnotherRoastIsOpen
+            else
+                match roast.Status with
+                | NotPublished ->
+                    let summary = getOfferedCoffeeSummary allCoffees roast
+                    
+                    Ok <| RoastStarted summary
+                | Open -> Error RoastAlreadyStarted
+                | Closed -> Error RoastAlreadyCompleted
 
         | CompleteRoast ->
             match roast.Status with
@@ -468,7 +509,7 @@ module Roast =
                 RoastDate = roastDate
                 OrderByDate = orderByDate }
 
-        | RoastStarted -> { roast with Status = Open }
+        | RoastStarted _ -> { roast with Status = Open }
 
         | RoastCompleted -> { roast with Status = Closed }
 
@@ -491,26 +532,7 @@ module Roast =
                          |> List.filter (getCustomerId >> (<>) customerId)
                          |> List.append [ paidOrder ] }
 
-    let createAggregate allCustomers allCoffees today =
+    let createAggregate allRoasts allCustomers allCoffees today =
         { Empty = Roast.Empty
           Apply = apply
-          Execute = execute allCustomers allCoffees today }
-
-    let getOfferedCoffeeSummary (allCoffees: seq<Id<Coffee> * Coffee>) roast =
-        let getSummary (referenceId, (_, coffee: Coffee)) =
-            let name = CoffeeName.value coffee.Name
-            let price = UsdPrice.value coffee.PricePerBag
-            let weight = OzWeight.value coffee.WeightPerBag
-
-            let description =
-                CoffeeDescription.value coffee.Description
-
-            $"{CoffeeReferenceId.value referenceId}: {name} ({price:C} per {weight:N} oz bag) — {description}"
-
-        roast.Coffees
-        |> Seq.sortBy (fun kvp -> CoffeeReferenceId.value kvp.Key)
-        |> Seq.map (
-            (fun kvp -> kvp.Key, allCoffees |> Seq.find (fst >> ((=) kvp.Value)))
-            >> getSummary
-        )
-        |> Seq.fold (fun a b -> a + b + "\n") ""
+          Execute = execute allRoasts allCustomers allCoffees today }

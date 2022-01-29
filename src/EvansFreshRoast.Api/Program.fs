@@ -71,6 +71,7 @@ let configureServices (compositionRoot: CompositionRoot) (services: IServiceColl
         sp.GetRequiredService<CompositionRoot>().RabbitMqConnectionFactory) |> ignore
     services.AddHostedService<CustomerReadModelConsumer>() |> ignore
     services.AddHostedService<CoffeeReadModelConsumer>() |> ignore
+    services.AddHostedService<RoastReadModelConsumer>() |> ignore
     services.AddHostedService<CustomerSmsConsumer>() |> ignore
     services.AddCors() |> ignore
     services.AddGiraffe() |> ignore

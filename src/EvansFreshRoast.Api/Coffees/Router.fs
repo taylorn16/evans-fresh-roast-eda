@@ -6,14 +6,14 @@ open EvansFreshRoast.Api.Coffees.HttpHandlers
 let router compositionRoot =
     choose [
         GET >=> choose [
-            routeCif "/coffees/%O" (getCoffee compositionRoot)
-            routeCix "/coffees(/?)" >=> getCoffees compositionRoot
+            routeCif "/%O" (getCoffee compositionRoot)
+            routeCix "(/?)" >=> getCoffees compositionRoot
         ]
         POST >=> choose [
-            routeCix "/coffees(/?)" >=> postCoffee compositionRoot
+            routeCix "(/?)" >=> postCoffee compositionRoot
         ]
         PUT >=> choose [
-            routeCif "/coffees/%O/activate" (activateCoffee compositionRoot)
-            routeCif "/coffees/%O" (putCoffee compositionRoot)
+            routeCif "/%O/activate" (activateCoffee compositionRoot)
+            routeCif "/%O" (putCoffee compositionRoot)
         ]
     ]

@@ -20,8 +20,12 @@ let saveRoastEvent connectionString (event: DomainEvent<Roast, Event>) =
         | CoffeesAdded _ -> "Coffees Added"
         | CustomersAdded _ -> "Customers Added"
         | RoastDatesChanged _ -> "Roast Dates Changed"
-        | RoastStarted -> "Roast Started"
+        | RoastStarted _ -> "Roast Started"
         | RoastCompleted -> "Roast Completed"
+        | CoffeesRemoved _ -> "Coffees Removed"
+        | CustomersRemoved _ -> "Customers Removed"
+        | InvoicePaid _ -> "Invoice Paid"
+        | ReminderSent -> "Reminder Sent"
 
     Db.saveEvent connectionString encodeRoastEvent "Roast" getEventName DatabaseError event
     |> Async.map (

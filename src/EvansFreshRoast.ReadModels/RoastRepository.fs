@@ -9,6 +9,27 @@ open NodaTime
 open System
 open System.Globalization
 
+type RoastSummaryView =
+    { Id: Id<Roast>
+      Name: RoastName
+      RoastDate: LocalDate
+      OrderByDate: LocalDate
+      CustomersCount: NonNegativeInt
+      Coffees: list<Id<Coffee> * CoffeeName>
+      RoastStatus: RoastStatus
+      OrdersCount: NonNegativeInt }
+
+type RoastDetailedView =
+    { Id: Id<Roast>
+      Name: RoastName
+      RoastDate: LocalDate
+      OrderByDate: LocalDate
+      Customers: Id<Customer> list
+      Coffees: Id<Coffee> list
+      Orders: Order list
+      Status: RoastStatus
+      SentRemindersCount: NonNegativeInt }
+
 module RoastRepository =
     
     let private awaitIgnoreOk task =
@@ -344,7 +365,7 @@ module RoastRepository =
                 | _ -> return Error "Error updating roast dates."
             }
 
-        | RoastStarted ->
+        | RoastStarted _ ->
             async {
                 try
                     return! connection
@@ -396,16 +417,6 @@ module RoastRepository =
           InvoiceAmount: decimal option
           PaymentMethod: string option }
 
-    type DetailedRoastView =
-        { Name: RoastName
-          RoastDate: LocalDate
-          OrderByDate: LocalDate
-          Customers: Id<Customer> list
-          Coffees: Id<Coffee> list
-          Orders: Order list
-          Status: RoastStatus
-          SentRemindersCount: NonNegativeInt }
-
     let parseRoastStatus =
         function
         | "NotPublished" -> NotPublished
@@ -416,8 +427,53 @@ module RoastRepository =
     let getRoast connectionString roastId =
         let connection = Sql.connect <| ConnectionString.value connectionString
 
+        let selectRoastSql =
+            """
+            SELECT
+                roast_id
+              , roast_name
+              , roast_date
+              , order_by_date
+              , customer_ids
+              , coffee_ids
+              , roast_status
+              , reminders_sent_count
+              , order_id
+              , customer_id
+              , placed_time
+              , order_line_item_id
+              , coffee_id
+              , quantity
+              , invoice_amount
+              , payment_method
+            FROM roasts
+            LEFT JOIN orders ON roast_fk = roast_id
+            LEFT JOIN order_line_items ON order_fk = order_id
+            LEFT JOIN invoices ON invoice_id = invoice_fk
+            WHERE roast_id = @roastId
+            """
+
+        let readRoastRow (row: RowReader) =
+            { RoastId = row.uuid "roast_id"
+              RoastName = row.string "roast_name"
+              RoastDate = row.dateTime "roast_date"
+              OrderByDate = row.dateTime "order_by_date"
+              CustomerIds = row.uuidArray "customer_ids"
+              CoffeeIds = row.uuidArray "coffee_ids"
+              RoastStatus = row.string "roast_status"
+              RemindersSentCount = row.int "reminders_sent_count"
+              OrderId = row.int64OrNone "order_id"
+              CustomerId = row.uuidOrNone "customer_id"
+              PlacedTime = row.datetimeOffsetOrNone "placed_time"
+              OrderLineItemId = row.int64OrNone "order_line_item_id"
+              CoffeeId = row.uuidOrNone "coffee_id"
+              Quantity = row.intOrNone "quantity"
+              InvoiceAmount = row.decimalOrNone "invoice_amount"
+              PaymentMethod = row.stringOrNone "payment_method" }
+
         let mapDbRoastRow dbRoastRow orders =
-            { Name = dbRoastRow.RoastName |> RoastName.create |> unsafeAssertOk
+            { Id = dbRoastRow.RoastId |> Id.create |> unsafeAssertOk
+              Name = dbRoastRow.RoastName |> RoastName.create |> unsafeAssertOk
               RoastDate = LocalDate.FromDateTime(dbRoastRow.RoastDate)
               OrderByDate = LocalDate.FromDateTime(dbRoastRow.OrderByDate)
               Customers =
@@ -432,131 +488,85 @@ module RoastRepository =
               Status = dbRoastRow.RoastStatus |> parseRoastStatus
               SentRemindersCount = dbRoastRow.RemindersSentCount |> NonNegativeInt.create |> unsafeAssertOk }
 
+        let convertResultsToDetailedRoastView (rows: DbRoastRow list) =
+            let roastsWithNoOrders =
+                rows
+                |> List.filter (fun r -> Option.isNone r.OrderId)
+                |> List.map (fun r -> mapDbRoastRow r [])
+
+            let rowsWithOrders =
+                rows
+                |> List.filter (fun r -> Option.isSome r.OrderId)
+
+            rowsWithOrders
+            |> List.groupBy (fun r -> r.RoastId)
+            |> List.map (fun (_, roastGroup) ->
+                let orders =
+                    roastGroup
+                    |> List.groupBy (fun rgr -> rgr.OrderId.Value)
+                    |> List.map (fun (_, orderGroup) ->
+                        let orderDetails =
+                            { CustomerId = orderGroup.Head.CustomerId.Value |> Id.create |> unsafeAssertOk
+                              Timestamp = OffsetDateTime.FromDateTimeOffset(orderGroup.Head.PlacedTime.Value)
+                              LineItems =
+                                orderGroup
+                                |> List.map (fun x ->
+                                    let coffeeId: Id<Coffee> = x.CoffeeId.Value |> Id.create |> unsafeAssertOk
+                                    let quantity = x.Quantity.Value |> Quantity.create |> unsafeAssertOk
+                                    
+                                    coffeeId, quantity)
+                                |> dict }
+
+                        let isConfirmed = Option.isSome orderGroup.Head.InvoiceAmount
+                        let isPaid = Option.isSome orderGroup.Head.PaymentMethod
+                        
+                        match isConfirmed, isPaid with
+                        | true, true ->
+                            let invoiceAmt =
+                                orderGroup.Head.InvoiceAmount.Value
+                                |> UsdInvoiceAmount.create
+                                |> unsafeAssertOk
+
+                            let paymentMethod =
+                                orderGroup.Head.PaymentMethod.Value
+                                |> function
+                                    | "Unknown" -> Unknown
+                                    | "Venmo" -> Venmo
+                                    | "Cash" -> Cash
+                                    | "Check" -> Check
+                                    | _ -> failwith "Error parsing payment method."
+
+                            ConfirmedOrder(orderDetails, PaidInvoice(invoiceAmt, paymentMethod))
+
+                        | true, _ ->
+                            let invoiceAmt =
+                                orderGroup.Head.InvoiceAmount.Value
+                                |> UsdInvoiceAmount.create
+                                |> unsafeAssertOk
+
+                            ConfirmedOrder(orderDetails, UnpaidInvoice(invoiceAmt))
+
+                        | _ ->
+                            UnconfirmedOrder orderDetails)
+
+                
+                mapDbRoastRow roastGroup.Head orders
+            )
+            |> List.append roastsWithNoOrders
+
         async {
             return! connection
-            |> Sql.query
-                """
-                SELECT
-                    roast_id
-                  , roast_name
-                  , roast_date
-                  , order_by_date
-                  , customer_ids
-                  , coffee_ids
-                  , roast_status
-                  , reminders_sent_count
-                  , order_id
-                  , customer_id
-                  , placed_time
-                  , order_line_item_id
-                  , coffee_id
-                  , quantity
-                  , invoice_amount
-                  , payment_method
-                FROM roasts
-                LEFT JOIN orders ON roast_fk = roast_id
-                LEFT JOIN order_line_items ON order_fk = order_id
-                LEFT JOIN invoices ON invoice_id = invoice_fk
-                WHERE roast_id = @roastId
-                """
-            |> Sql.parameters
-                [ "roastId", roastId |> Id.value |> Sql.uuid ]
-            |> Sql.executeAsync (fun row ->
-                { RoastId = row.uuid "roast_id"
-                  RoastName = row.string "roast_name"
-                  RoastDate = row.dateTime "roast_date"
-                  OrderByDate = row.dateTime "order_by_date"
-                  CustomerIds = row.uuidArray "customer_ids"
-                  CoffeeIds = row.uuidArray "coffee_ids"
-                  RoastStatus = row.string "roast_status"
-                  RemindersSentCount = row.int "reminders_sent_count"
-                  OrderId = row.int64OrNone "order_id"
-                  CustomerId = row.uuidOrNone "customer_id"
-                  PlacedTime = row.datetimeOffsetOrNone "placed_time"
-                  OrderLineItemId = row.int64OrNone "order_line_item_id"
-                  CoffeeId = row.uuidOrNone "coffee_id"
-                  Quantity = row.intOrNone "quantity"
-                  InvoiceAmount = row.decimalOrNone "invoice_amount"
-                  PaymentMethod = row.stringOrNone "payment_method" })
+            |> Sql.query selectRoastSql
+            |> Sql.parameters [ "roastId", roastId |> Id.value |> Sql.uuid ]
+            |> Sql.executeAsync readRoastRow
             |> Async.AwaitTask
-            |> Async.map (fun rows ->
-                let roastsWithNoOrders =
-                    rows
-                    |> List.filter (fun r -> Option.isNone r.OrderId)
-                    |> List.map (fun r -> mapDbRoastRow r [])
-
-                let rowsWithOrders =
-                    rows
-                    |> List.filter (fun r -> Option.isSome r.OrderId)
-
-                rowsWithOrders
-                |> List.groupBy (fun r -> r.RoastId)
-                |> List.map (fun (roastId, roastGroup) ->
-                    let orders =
-                        roastGroup
-                        |> List.groupBy (fun rgr -> rgr.OrderId.Value)
-                        |> List.map (fun (_, orderGroup) ->
-                            let orderDetails =
-                                { CustomerId = orderGroup.Head.CustomerId.Value |> Id.create |> unsafeAssertOk
-                                  Timestamp = OffsetDateTime.FromDateTimeOffset(orderGroup.Head.PlacedTime.Value)
-                                  LineItems =
-                                    orderGroup
-                                    |> List.map (fun x ->
-                                        let coffeeId: Id<Coffee> = x.CoffeeId.Value |> Id.create |> unsafeAssertOk
-                                        let quantity = x.Quantity.Value |> Quantity.create |> unsafeAssertOk
-                                        
-                                        coffeeId, quantity)
-                                    |> dict }
-
-                            let isConfirmed = Option.isSome orderGroup.Head.InvoiceAmount
-                            let isPaid = Option.isSome orderGroup.Head.PaymentMethod
-                            
-                            match isConfirmed, isPaid with
-                            | true, true ->
-                                let invoiceAmt =
-                                    orderGroup.Head.InvoiceAmount.Value
-                                    |> UsdInvoiceAmount.create
-                                    |> unsafeAssertOk
-
-                                let paymentMethod =
-                                    orderGroup.Head.PaymentMethod.Value
-                                    |> function
-                                        | "Unknown" -> Unknown
-                                        | "Venmo" -> Venmo
-                                        | "Cash" -> Cash
-                                        | "Check" -> Check
-                                        | _ -> failwith "Error parsing payment method."
-
-                                ConfirmedOrder(orderDetails, PaidInvoice(invoiceAmt, paymentMethod))
-
-                            | true, _ ->
-                                let invoiceAmt =
-                                    orderGroup.Head.InvoiceAmount.Value
-                                    |> UsdInvoiceAmount.create
-                                    |> unsafeAssertOk
-
-                                ConfirmedOrder(orderDetails, UnpaidInvoice(invoiceAmt))
-
-                            | _ ->
-                                UnconfirmedOrder orderDetails)
-
-                    
-                    mapDbRoastRow roastGroup.Head orders
-                )
-                |> List.append roastsWithNoOrders
+            |> Async.map (
+                convertResultsToDetailedRoastView
+                >> List.tryHead
             )
         }
 
-    type RoastSummary =
-        { Name: RoastName
-          RoastDate: LocalDate
-          OrderByDate: LocalDate
-          CustomersCount: NonNegativeInt
-          Coffees: list<Id<Coffee> * CoffeeName>
-          RoastStatus: RoastStatus
-          OrdersCount: NonNegativeInt }
-
-    let getAllRoasts (getAllCoffees: unit -> Async<(Id<Coffee> * Coffee) list>) connectionString =
+    let getAllRoasts connectionString (getAllCoffees: unit -> Async<(Id<Coffee> * Coffee) list>) =
         let toLocalDate (dt: DateTime) = LocalDate.FromDateTime(dt)
         
         async {
@@ -582,7 +592,8 @@ module RoastRepository =
             |> Sql.executeAsync (fun row ->
                 let rowCoffeeIds = row.uuidArray "coffee_ids"
 
-                { Name = row.string "roast_name" |> RoastName.create |> unsafeAssertOk
+                { Id = row.uuid "roast_id" |> Id.create |> unsafeAssertOk
+                  Name = row.string "roast_name" |> RoastName.create |> unsafeAssertOk
                   RoastDate = row.dateTime "roast_date" |> toLocalDate
                   OrderByDate = row.dateTime "order_by_date" |> toLocalDate
                   CustomersCount = row.int "customers_count" |> NonNegativeInt.create |> unsafeAssertOk

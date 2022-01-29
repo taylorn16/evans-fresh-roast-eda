@@ -50,21 +50,58 @@ let encodeRoastEvent event =
 
     | CustomersAdded customerIds ->
         Encode.object [ "addedCustomerIds",
-                        Encode.array (
+                        Encode.list (
                             customerIds
-                            |> Seq.map (Id.value >> Encode.guid)
-                            |> Seq.toArray
+                            |> List.map (Id.value >> Encode.guid)
                         ) ]
 
     | RoastDatesChanged (roastDate, orderByDate) ->
         Encode.object [ "roastDate", encodeLocalDate roastDate
                         "orderByDate", encodeLocalDate orderByDate ]
 
-    | RoastStarted ->
-        Encode.string "roastStarted"
+    | RoastStarted summary ->
+        Encode.object [ "summary", Encode.string summary ]
 
     | RoastCompleted ->
         Encode.string "roastCompleted"
+
+    | CustomersRemoved customerIds ->
+        Encode.object [ "removedCustomerIds",
+                        Encode.list (
+                            customerIds
+                            |> List.map (Id.value >> Encode.guid)
+                        ) ]
+
+    | CoffeesRemoved coffeeIds ->
+        Encode.object [ "removedCoffeeIds",
+                        Encode.list (
+                            coffeeIds
+                            |> List.map (Id.value >> Encode.guid)
+                        ) ]
+
+    | ReminderSent ->
+        Encode.string "reminderSent"
+
+    | InvoicePaid(customerId, paymentMethod) ->
+        Encode.object [ "customerId", customerId |> Id.value |> Encode.guid
+                        "paymentMethod", paymentMethod |> string |> Encode.string ]
+
+let decodePaymentMethod: Decoder<PaymentMethod> =
+    Decode.string
+    |> Decode.andThen (
+        function
+        | "Unknown" -> Decode.succeed Unknown
+        | "Venmo" -> Decode.succeed Venmo
+        | "Cash" -> Decode.succeed Cash
+        | "Check" -> Decode.succeed Check
+        | s -> Decode.fail $"'{s}' is not a valid payment method"
+    )
+
+let decodeInvoicePaid: Decoder<Event> =
+    Decode.map2
+        (fun customerId paymentMethod -> InvoicePaid(customerId, paymentMethod))
+        (Decode.field "customerId" decodeId)
+        (Decode.field "paymentMethod" decodePaymentMethod)
 
 let decodeQuantity: Decoder<Quantity> =
     let parseQuantity qty =
@@ -117,11 +154,23 @@ let decodeCoffeesAdded: Decoder<Event> =
         (Decode.array decodeId
          |> Decode.map (Array.toList >> CoffeesAdded))
 
+let decodeCoffeesRemoved: Decoder<Event> =
+    Decode.field
+        "removedCoffeeIds"
+        (Decode.array decodeId
+         |> Decode.map (Array.toList >> CoffeesRemoved))
+
 let decodeCustomersAdded: Decoder<Event> =
     Decode.field
         "addedCustomerIds"
         (Decode.array decodeId
          |> Decode.map (Array.toList >> CustomersAdded))
+
+let decodeCustomersRemoved: Decoder<Event> =
+    Decode.field
+        "removedCustomerIds"
+        (Decode.array decodeId
+         |> Decode.map (Array.toList >> CustomersRemoved))
 
 let decodeRoastDatesChanged: Decoder<Event> =
     Decode.map2
@@ -129,11 +178,11 @@ let decodeRoastDatesChanged: Decoder<Event> =
         (Decode.field "roastDate" decodeLocalDate)
         (Decode.field "orderByDate" decodeLocalDate)
 
-let decodeRoastStartedOrCompleted: Decoder<Event> =
+let decodeRoastCompletedOrReminderSent: Decoder<Event> =
     Decode.string
     |> Decode.andThen (function
-        | "roastStarted" -> Decode.succeed RoastStarted
         | "roastCompleted" -> Decode.succeed RoastCompleted
+        | "reminderSent" -> Decode.succeed ReminderSent
         | _ -> Decode.fail "expected roastStarted or roastCompleted not some other random string")
 
 let decodeRoastName: Decoder<RoastName> =
@@ -155,12 +204,20 @@ let decodeCreated: Decoder<Event> =
         (Decode.field "roastDate" decodeLocalDate)
         (Decode.field "orderByDate" decodeLocalDate)
 
+let decodeRoastStarted: Decoder<Event> =
+    Decode.field "summary" Decode.string
+    |> Decode.map RoastStarted
+
 let decodeRoastEvent: Decoder<Event> =
-    Decode.oneOf [ decodeOrderPlaced
+    Decode.oneOf [ decodeCreated
+                   decodeOrderPlaced
                    decodeOrderConfirmed
                    decodeOrderCancelled
                    decodeCoffeesAdded
+                   decodeCoffeesRemoved
                    decodeCustomersAdded
+                   decodeCustomersRemoved
                    decodeRoastDatesChanged
-                   decodeRoastStartedOrCompleted
-                   decodeCreated ]
+                   decodeRoastCompletedOrReminderSent
+                   decodeInvoicePaid
+                   decodeRoastStarted ]

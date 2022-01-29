@@ -7,6 +7,8 @@ open EvansFreshRoast.Api
 open EvansFreshRoast.Utils
 open NodaTime
 open RabbitMQ.Client
+open EvansFreshRoast.ReadModels
+open EvansFreshRoast.Utils
 
 type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
@@ -19,8 +21,8 @@ type CompositionRoot =
       GetAllCoffees: LoadAllAggregates<Coffee>
       LoadRoastEvents: LoadEvents<Roast, Roast.Event, EventStoreError>
       SaveRoastEvent: SaveEvent<Roast, Roast.Event, EventStoreError>
-      GetRoast: LoadAggregate<Roast>
-      GetAllRoasts: LoadAllAggregates<Roast>
+      GetRoast: Id<Roast> -> Async<option<RoastDetailedView>>
+      GetAllRoasts: unit -> Async<list<RoastSummaryView>>
       GetToday: unit -> LocalDate
       RabbitMqConnectionFactory: IConnectionFactory
       TwilioFromPhoneNumber: UsPhoneNumber
@@ -37,14 +39,17 @@ type CompositionRoot =
             this.LoadCoffeeEvents
             this.SaveCoffeeEvent
 
-    member this.CreateRoastCommandHandler() = async {
+    member this.GetRoastCommandHandler() = async {
+        let! allRoasts =
+            this.GetAllRoasts()
+            |> Async.map (List.map (fun rv -> rv.Id, rv.RoastStatus))
         let! allCustomers = this.GetAllCustomers()
         let! allCoffees = this.GetAllCoffees()
         let today = this.GetToday()
         
         return
             Aggregate.createHandler
-                (Roast.createAggregate allCustomers allCoffees today)
+                (Roast.createAggregate allRoasts allCustomers allCoffees today)
                 this.LoadRoastEvents
                 this.SaveRoastEvent 
     }
@@ -90,7 +95,7 @@ module CompositionRoot =
           LoadRoastEvents = roastsWorkflow.LoadEvents
           SaveRoastEvent = roastsWorkflow.SaveEvent
           GetRoast = roastsWorkflow.GetRoast
-          GetAllRoasts = roastsWorkflow.GetAllRoasts
+          GetAllRoasts = fun _ -> roastsWorkflow.GetAllRoasts coffeesWorkflow.GetAllCoffees
           GetToday = fun _ -> LocalDate.FromDateTime(System.DateTime.Today)
           RabbitMqConnectionFactory = rabbitMqConnectionFactory
           TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk

@@ -31,6 +31,7 @@
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
     <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />
+    <Compile Include="EventConsumers/ReadModels/RoastReadModelConsumer.fs" />
     <Compile Include="EventConsumers/Sms/CustomerSmsConsumer.fs" />
     <Compile Include="Program.fs" />
     <Content Include="appsettings.json">
