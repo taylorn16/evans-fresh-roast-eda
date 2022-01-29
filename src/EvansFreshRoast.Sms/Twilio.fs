@@ -9,9 +9,9 @@ module Twilio =
         async {
             try
                 MessageResource.Create(
-                ``to``=PhoneNumber(UsPhoneNumber.value toPhoneNumber),
-                ``from``=PhoneNumber(UsPhoneNumber.value fromPhoneNumber),
-                ``body``=SmsMsg.value message) |> ignore
+                ``to`` = PhoneNumber(UsPhoneNumber.formatE164 toPhoneNumber),
+                ``from`` = PhoneNumber(UsPhoneNumber.formatE164 fromPhoneNumber),
+                ``body`` = SmsMsg.value message) |> ignore
 
                 return Ok ()
             with

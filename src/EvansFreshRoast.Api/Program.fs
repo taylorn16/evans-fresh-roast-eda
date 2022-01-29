@@ -76,6 +76,7 @@ module Program =
         services.AddHostedService<CoffeeReadModelConsumer>() |> ignore
         services.AddHostedService<RoastReadModelConsumer>() |> ignore
         services.AddHostedService<CustomerSmsConsumer>() |> ignore
+        services.AddHostedService<RoastSmsConsumer>() |> ignore
         services.AddCors() |> ignore
         services.AddGiraffe() |> ignore
 

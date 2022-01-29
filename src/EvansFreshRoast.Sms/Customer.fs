@@ -39,7 +39,7 @@ let handleEvent
             let! customer = getCustomer event.AggregateId
             return! customer
             |> Option.map (fun (_, cust) ->
-                $"Ok, {CustomerName.value cust.Name}. You will no longer receive text updates. "
+                $"Ok, {CustomerName.value cust.Name}. You will not receive any texts for future roasts. "
                 + "If you change your mind, just text me SUBSCRIBE at any time."
                 |> SmsMsg.create
                 |> unsafeAssertOk

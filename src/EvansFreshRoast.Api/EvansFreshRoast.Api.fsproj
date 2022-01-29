@@ -36,6 +36,7 @@
     <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />
     <Compile Include="EventConsumers/ReadModels/RoastReadModelConsumer.fs" />
     <Compile Include="EventConsumers/Sms/CustomerSmsConsumer.fs" />
+    <Compile Include="EventConsumers/Sms/RoastSmsConsumer.fs" />
     <Compile Include="Program.fs" />
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

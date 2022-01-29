@@ -7,19 +7,6 @@
 
 ## Incoming SMS Webhook Mappings
 
-### "SUBSCRIBE"
-
-- Corresponds to a Customer.Subscribed event
-- Subscribe to text notifications
-- Can do this any time
-
-### "UNSUBSCRIBE"
-
-- Corresponds to a Customer.Unsubscribed event
-- Unsubscribe from receiving text notifications
-- Still will receive texts related to open orders
-- Can do this any time
-
 ### "CANCEL"
 
 - Cancel an open order on the open roast (if one exists)
