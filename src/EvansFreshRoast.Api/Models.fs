@@ -38,13 +38,18 @@ type CoffeeDto =
       WeightPerBag: decimal }
 
 [<CLIMutable>]
+type RoastSummaryCoffee =
+    { Id: Guid
+      Name: string }
+
+[<CLIMutable>]
 type RoastSummaryDto =
     { Id: Guid
       Name: string
       RoastDate: string
       OrderByDate: string
       CustomersCount: int
-      Coffees: list<Guid * string>
+      Coffees: RoastSummaryCoffee list
       RoastStatus: string
       OrdersCount: int }
 
@@ -57,8 +62,8 @@ type RoastDetailedOrderInvoiceDto =
 type RoastDetailedOrderDto =
     { CustomerId: Guid
       Timestamp: string
-      LineItems: list<Guid * int>
-      Invoice: RoastDetailedOrderDto option }
+      LineItems: Map<Guid, int>
+      Invoice: RoastDetailedOrderInvoiceDto option } 
 
 [<CLIMutable>]
 type RoastDetailedDto =

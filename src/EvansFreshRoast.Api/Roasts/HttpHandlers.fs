@@ -11,6 +11,7 @@ open EvansFreshRoast.Utils
 open EvansFreshRoast.Serialization.Roast
 open Giraffe
 open Microsoft.AspNetCore.Http
+open System.Collections.Generic
 
 let withRoastId (id: System.Guid) (createHandler: Id<Roast> -> HttpHandler): HttpHandler = 
     fun next ctx -> task {
@@ -270,9 +271,10 @@ let getRoasts (compositionRoot: CompositionRoot): HttpHandler =
                   Coffees =
                     rsv.Coffees
                     |> List.map (fun (coffeeId, coffeeName) ->
-                        coffeeId |> Id.value, coffeeName |> CoffeeName.value) })
+                        { Id = coffeeId |> Id.value
+                          Name = coffeeName |> CoffeeName.value }) }
+            )
 
-        // TODO: coffee id/name tuples are being encoded oddly
         return! Successful.OK roastDtos next ctx
     }
 
@@ -284,9 +286,49 @@ let getRoast (compositionRoot: CompositionRoot) id: HttpHandler =
                 cancellationToken=ctx.RequestAborted)
 
         match roast with
-        | Some roast' ->
-            // TODO: map to RoastDetailedDto!
-            return! Successful.OK roast' next ctx
+        | Some roast ->
+            let dto =
+                { Id = roast.Id |> Id.value
+                  Name = roast.Name |> RoastName.value
+                  RoastDate = roast.RoastDate.ToString("R", null)
+                  OrderByDate = roast.OrderByDate.ToString("R", null)
+                  Customers = roast.Customers |> List.map Id.value
+                  Coffees = roast.Coffees |> List.map Id.value
+                  Status = string roast.Status
+                  SentRemindersCount = roast.SentRemindersCount |> NonNegativeInt.value
+                  Orders =
+                    roast.Orders
+                    |> List.map (fun order ->
+                        let mapInvoice =
+                            function
+                            | PaidInvoice(amt, paymentMethod) ->
+                                Some { Amount = UsdInvoiceAmount.value amt
+                                       PaymentMethod = Some <| string paymentMethod }
+                                           
+                            | UnpaidInvoice amt ->
+                                Some { Amount = UsdInvoiceAmount.value amt
+                                       PaymentMethod = None }
+
+                        let mapLineItems (lineItems: IDictionary<Id<Coffee>, Quantity>) =
+                            lineItems
+                            |> Seq.map (fun kvp -> kvp.Key |> Id.value, kvp.Value |> Quantity.value)
+                            |> Map.ofSeq
+                        
+                        match order with
+                        | ConfirmedOrder(details, invoice) ->
+                            { CustomerId = details.CustomerId |> Id.value
+                              Timestamp = details.Timestamp.ToString("o", null)
+                              Invoice = mapInvoice invoice
+                              LineItems = mapLineItems details.LineItems }
+
+                        | UnconfirmedOrder details ->
+                            { CustomerId = details.CustomerId |> Id.value
+                              Timestamp = details.Timestamp.ToString("o", null)
+                              Invoice = None
+                              LineItems = mapLineItems details.LineItems }
+                    ) }
+                    
+            return! Successful.OK dto next ctx
 
         | None ->
             return! RequestErrors.NOT_FOUND "Roast not found." next ctx

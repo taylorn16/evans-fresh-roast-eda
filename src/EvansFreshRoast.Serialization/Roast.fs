@@ -210,14 +210,14 @@ let decodeRoastStarted: Decoder<Event> =
 
 let decodeRoastEvent: Decoder<Event> =
     Decode.oneOf [ decodeCreated
+                   decodeInvoicePaid
                    decodeOrderPlaced
                    decodeOrderConfirmed
-                   decodeOrderCancelled
                    decodeCoffeesAdded
                    decodeCoffeesRemoved
                    decodeCustomersAdded
                    decodeCustomersRemoved
                    decodeRoastDatesChanged
                    decodeRoastCompletedOrReminderSent
-                   decodeInvoicePaid
-                   decodeRoastStarted ]
+                   decodeRoastStarted
+                   decodeOrderCancelled ]
