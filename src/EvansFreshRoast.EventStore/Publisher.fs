@@ -14,7 +14,7 @@ module Publisher =
     let exchangeName = "domain.events"
 
     let connectionFactory = ConnectionFactory(
-        HostName = "localhost", //"rabbitmq"
+        HostName = "rabbitmq", //"rabbitmq"
         UserName = "guest",
         Password = "guest",
         Port = 5672)

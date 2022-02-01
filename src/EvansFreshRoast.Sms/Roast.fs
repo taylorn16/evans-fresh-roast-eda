@@ -74,8 +74,8 @@ let handleEvent
                 return!
                     $"Thanks, {CustomerName.value customer.Name}! Here's what we got:\n\n"
                     + orderReivew + "\n\n"
-                    + "If that looks correct to you, please reply CONFIRM. "
-                    + "Otherwise, reply CANCEL to scratch that and try again."
+                    + "If that looks correct to you, please reply 'Confirm Order'. "
+                    + "Otherwise, reply 'Cancel Order' to scratch that and try again."
                     |> SmsMsg.create
                     |> unsafeAssertOk
                     |> sendSms customer.PhoneNumber

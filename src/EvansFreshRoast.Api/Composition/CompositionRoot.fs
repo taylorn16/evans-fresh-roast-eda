@@ -8,7 +8,6 @@ open EvansFreshRoast.Utils
 open NodaTime
 open RabbitMQ.Client
 open EvansFreshRoast.ReadModels
-open EvansFreshRoast.Utils
 
 type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
@@ -28,7 +27,8 @@ type CompositionRoot =
       GetNow: unit -> OffsetDateTime
       RabbitMqConnectionFactory: IConnectionFactory
       TwilioFromPhoneNumber: UsPhoneNumber
-      ReadStoreConnectionString: ConnectionString }
+      ReadStoreConnectionString: ConnectionString
+      TwilioAccountSid: string }
     member this.CustomerCommandHandler with get () =
         Aggregate.createHandler
             Customer.aggregate
@@ -103,4 +103,5 @@ module CompositionRoot =
           GetNow = fun _ -> OffsetDateTime.FromDateTimeOffset(System.DateTimeOffset.Now)
           RabbitMqConnectionFactory = rabbitMqConnectionFactory
           TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk
-          ReadStoreConnectionString = readStoreConnectionString }
+          ReadStoreConnectionString = readStoreConnectionString
+          TwilioAccountSid = settings.Twilio.AccountSid }

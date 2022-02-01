@@ -18,7 +18,6 @@ open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Api
 open RabbitMQ.Client
 
-
 module Program =
     // ---------------------------------
     // Web app
@@ -105,6 +104,12 @@ module Program =
         let confBuilder = configureSettings <| ConfigurationBuilder()
         let settings = confBuilder.Build().Get<Settings>()
         let compositionRoot = CompositionRoot.compose settings
+
+        if compositionRoot.TwilioAccountSid <> "" then
+            Twilio.TwilioClient.Init(settings.Twilio.AccountSid, settings.Twilio.AuthToken)
+            |> ignore
+        else
+            () |> ignore
 
         Host
             .CreateDefaultBuilder(args)

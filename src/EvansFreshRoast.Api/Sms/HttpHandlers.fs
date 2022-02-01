@@ -2,15 +2,70 @@ module EvansFreshRoast.Api.Sms.HttpHandlers
 
 open Giraffe
 open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Logging
 open EvansFreshRoast.Api.Composition
 open Twilio.AspNet.Common
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Utils
 open EvansFreshRoast.Sms.IncomingCommandParser
 
+let twilioResponse =
+    sprintf
+        """
+        <Response>
+            <Message>
+                <Body>%s</Body>
+            </Message>
+        </Response>
+        """
+
+let sendTwilioResponse msg: HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
+        ctx.SetHttpHeader("Content-Type", "application/xml")
+        return! ctx.WriteStringAsync(twilioResponse msg)
+    }
+
+let verifyTwilioId (compositionRoot: CompositionRoot): HttpHandler =
+    // TODO: authenticate the request with the auth token
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
+        let! request = ctx.BindModelAsync<SmsRequest>()
+
+        if request.AccountSid = compositionRoot.TwilioAccountSid then
+            return! next ctx
+        else
+            let logger = ctx.GetLogger("verifyTwilioId")
+            logger.LogWarning("Received request to SMS webhook with invalid Twilio Account Sid.")
+            return! RequestErrors.FORBIDDEN "Invalid request." next ctx
+    }
+
+let logOnlyTwilioError (err: string): HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
+        let logger = ctx.GetLogger("logOnlyTwilioError")
+        logger.LogError(err)
+        
+        return! Successful.OK "" next ctx
+    }
+
+let genericTwilioError (err: string): HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
+        let logger = ctx.GetLogger("genericTwilioError")
+        logger.LogError(err)
+
+        let msg = "Uh oh! Something went wrong on our end. Please reach out to Evan directly."
+        return! (sendTwilioResponse msg) next ctx
+    }
+
+let orderParsingTwilioError (incomingMsg: SmsMsg) (respMsg: string): HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
+        let logger = ctx.GetLogger("orderParsingTwilioError")
+        logger.LogDebug($"Failed to parse order: \"%s{SmsMsg.value incomingMsg}\". Response given: \"{respMsg}\"")
+
+        return! (sendTwilioResponse respMsg) next ctx
+    }
+
 let receiveIncomingSms (compositionRoot: CompositionRoot): HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) -> task {
-        let! smsRequest = ctx.BindJsonAsync<SmsRequest>()
+        let! smsRequest = ctx.BindModelAsync<SmsRequest>()
 
         match SmsMsg.create smsRequest.Body with
         | Ok message ->
@@ -42,10 +97,7 @@ let receiveIncomingSms (compositionRoot: CompositionRoot): HttpHandler =
                             return! Successful.ok (text "") next ctx
 
                         | Error handlerErr ->
-                            let response = Twilio.TwiML.MessagingResponse()
-                            response.Message($"Something went wrong: {handlerErr}") |> ignore
-
-                            return! Successful.OK (response.ToString()) next ctx // TODO: how do XML?
+                            return! (genericTwilioError $"{handlerErr}") next ctx
 
                     | CustomerCommand(customerId, customerCmd) ->
                         let handleCommand = compositionRoot.CustomerCommandHandler
@@ -55,22 +107,25 @@ let receiveIncomingSms (compositionRoot: CompositionRoot): HttpHandler =
                             return! Successful.ok (text "") next ctx
 
                         | Error handlerErr ->
-                            let response = Twilio.TwiML.MessagingResponse()
-                            response.Message($"Something went wrong: {handlerErr}") |> ignore
-
-                            return! Successful.OK (response.ToString()) next ctx
+                            return! (genericTwilioError $"{handlerErr}") next ctx
 
                 | Error parseErr ->
-                    let response = Twilio.TwiML.MessagingResponse()
-                    response.Message($"Couldn't parse: {parseErr}") |> ignore
-
-                    return! Successful.OK (response.ToString()) next ctx
+                    let resp =
+                        match parseErr with
+                        | NoOpenRoast attemptedAction ->
+                            $"Sorry, all roasts are closed at the moment, so you can't {attemptedAction}. "
+                            + "Please reach out to Evan directly if you need to."
+                            
+                        | LineParseErrors lineErrs ->
+                            foldLineParseErrors lineErrs
+                    
+                    return! (orderParsingTwilioError message resp) next ctx
 
             | None ->
-                // No customer
-                return! Successful.ok (text "") next ctx
+                let logMsg = $"No customer found with phone number %s{UsPhoneNumber.value phoneNumber}"
+                return! logOnlyTwilioError logMsg next ctx
 
         | Error _ ->
-            // No message body??
-            return! Successful.ok (text "") next ctx
+            let logMsg = $"Received a text message from {smsRequest.From}, but it was empty."
+            return! logOnlyTwilioError logMsg next ctx
     }

@@ -8,6 +8,7 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Utils
 open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Logging
 open Giraffe
 
 let getCoffees (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
@@ -67,7 +68,9 @@ let putCoffee (compositionRoot: CompositionRoot) id: HttpHandler =
                     (Id.value event.AggregateId)
 
             return! Successful.accepted (text responseText) next ctx
+
         | Error handlerErr ->
+            ctx.GetLogger("putCoffee").LogError($"{handlerErr}");
             return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
     }
     |> useRequestDecoder decodeUpdateCoffeeCmd

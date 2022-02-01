@@ -131,7 +131,7 @@ let putCustomers (compositionRoot: CompositionRoot) id: HttpHandler =
 
             match! handleCommandTask with
             | Ok _ ->
-                return! Successful.ACCEPTED "Coffees added." next ctx
+                return! Successful.ACCEPTED "Customers added." next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx

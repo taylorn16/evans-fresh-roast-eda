@@ -50,8 +50,11 @@ module Aggregate =
                                     |> (fun domainEvt ->
                                         domainEvt
                                         |> saveEvent
-                                        |> Async.map (Result.mapError FailedToSaveEvent)
-                                        |> Async.map (Result.map (fun _ -> domainEvt)))
+                                        |> Async.map (
+                                            Result.mapError FailedToSaveEvent
+                                            >> Result.map (fun _ -> domainEvt)
+                                        )
+                                    )
                             | Error e -> return Error <| DomainError e
                         }
 

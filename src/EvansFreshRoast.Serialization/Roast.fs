@@ -34,7 +34,8 @@ let encodeRoastEvent event =
         encodeOrderDetails details
 
     | OrderCancelled customerId ->
-        Encode.object [ "customerId", Encode.guid <| Id.value customerId ]
+        Encode.object [ "customerId", Encode.guid <| Id.value customerId
+                        "$$event", Encode.string "orderCancelled" ]
 
     | OrderConfirmed(customerId, invoiceAmt) ->
         Encode.object [ "customerId", Encode.guid <| Id.value customerId
@@ -145,8 +146,20 @@ let decodeOrderConfirmed: Decoder<Event> =
         (Decode.field "customerId" decodeId)
         (Decode.field "invoiceAmt" decodeInvoiceAmount)
 
+let decodeExactStr (exp: string): Decoder<string> =
+    Decode.string
+    |> Decode.andThen (fun s ->
+        if s = exp then
+            Decode.succeed s
+        else
+            Decode.fail $"Expecting {exp}, got {s}."
+    )
+
 let decodeOrderCancelled: Decoder<Event> =
-    Decode.map OrderCancelled (Decode.field "customerId" decodeId)
+    Decode.map2
+        (fun customerId _ -> OrderCancelled customerId)
+        (Decode.field "customerId" decodeId)
+        (Decode.field "$$event" (decodeExactStr "orderCancelled"))
 
 let decodeCoffeesAdded: Decoder<Event> =
     Decode.field

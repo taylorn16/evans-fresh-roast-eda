@@ -7,6 +7,8 @@ services:
       - "8080:80"
     mem_limit: 528m
     cpus: 0.5
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
 
   eventstoredb:
     build: ./src/EvansFreshRoast.EventStore
@@ -14,6 +16,10 @@ services:
       - "5432:5432"
     mem_limit: 256m
     cpus: 0.25
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - /tmp/evansfreshroast-eventstoredb-data:/var/lib/postgresql/data:rw
 
   readmodelsdb:
     build: ./src/EvansFreshRoast.ReadModels
@@ -21,6 +27,10 @@ services:
       - "2345:5432"
     mem_limit: 256m
     cpus: 0.25
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - /tmp/evansfreshroast-readmodelsdb-data:/var/lib/postgresql/data:rw
 
   rabbitmq:
     image: rabbitmq:3-management

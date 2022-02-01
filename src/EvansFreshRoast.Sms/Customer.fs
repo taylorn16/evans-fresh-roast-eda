@@ -16,7 +16,7 @@ let handleEvent
     | Created { Name = name; PhoneNumber = phoneNumber } ->
         $"Hey, {CustomerName.value name}! Evan's Fresh Roast here. "
         + "You've been added to the text list to get updates and order coffee. "
-        + "Please reply SUBSCRIBE to start receiving updates!"
+        + "Please reply 'Opt In' to start receiving updates!"
         |> SmsMsg.create
         |> unsafeAssertOk
         |> sendSms phoneNumber
@@ -26,8 +26,8 @@ let handleEvent
             let! customer = getCustomer event.AggregateId
             return! customer
             |> Option.map (fun (_, cust) ->
-                $"Alright, {cust.Name}! You're officially signed up to receive updates. "
-                + "Just text me UNSUBSCRIBE at any time to opt-out of receiving further texts."
+                $"Alright, {CustomerName.value cust.Name}! You're officially signed up to receive updates. "
+                + "Just text me 'Opt Out' at any time to opt-out of receiving further texts."
                 |> SmsMsg.create
                 |> unsafeAssertOk
                 |> sendSms cust.PhoneNumber)
@@ -40,7 +40,7 @@ let handleEvent
             return! customer
             |> Option.map (fun (_, cust) ->
                 $"Ok, {CustomerName.value cust.Name}. You will not receive any texts for future roasts. "
-                + "If you change your mind, just text me SUBSCRIBE at any time."
+                + "If you change your mind, just text me 'Opt In' at any time."
                 |> SmsMsg.create
                 |> unsafeAssertOk
                 |> sendSms cust.PhoneNumber)

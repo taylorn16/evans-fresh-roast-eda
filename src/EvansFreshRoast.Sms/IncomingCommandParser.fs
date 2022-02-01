@@ -18,7 +18,6 @@ type ParseError =
     | NoOpenRoast of attemptedCommand: string
     | LineParseErrors of LineParseError seq
 
-
 let trim (s: string) = s.Trim()
 
 let clean (s: string) =
@@ -57,7 +56,7 @@ let parseLines (orderMsg: string) =
     let lineParseResults =
         orderMsg
         |> splitOnNewlines
-        |> Seq.map (trim >> parseLine)
+        |> Seq.map (clean >> parseLine)
         |> List.ofSeq
     
     let failedLines =
@@ -111,13 +110,13 @@ let parse
     }
 
     match SmsMsg.value smsMsg |> clean with
-    | "subscribe" ->
+    | "optin" ->
         return Ok <| CustomerCommand(customerId, Customer.Command.Subscribe)
 
-    | "unsubscribe" ->
+    | "optout" ->
         return Ok <| CustomerCommand(customerId, Customer.Command.Unsubscribe)
 
-    | "cancel" ->
+    | "cancelorder" ->
         match! getOpenRoastId() with
         | Some openRoastId ->
             return Ok <| RoastCommand(openRoastId, Roast.Command.CancelOrder(customerId))
@@ -125,7 +124,8 @@ let parse
         | None ->
             return Error <| NoOpenRoast "cancel an order"
 
-    | "confirm" ->
+    | "confirm"
+    | "confirmorder" ->
         match! getOpenRoastId() with
         | Some openRoastId ->
             return Ok <| RoastCommand(openRoastId, Roast.Command.ConfirmOrder(customerId))
@@ -146,3 +146,31 @@ let parse
         | Error parseError ->
             return Error parseError
 }
+
+let rec join separator strs =
+    match strs with
+    | [] -> ""
+    | [s] -> s
+    | head::tail ->
+        head + separator + join separator tail
+
+let foldLineParseErrors (errs: LineParseError seq) =
+    let isInvalidQuantity =
+        function
+        | InvalidQuantity refId -> Some refId
+        | _ -> None
+
+    let errantQtyRefIds =
+        errs
+        |> Seq.choose isInvalidQuantity
+        |> Seq.map CoffeeReferenceId.value
+        |> List.ofSeq
+        |> join ", "
+
+    match errantQtyRefIds with
+    | "" ->
+        "Sorry, I didn't understand that. If you are trying to place an order, "
+        + "please use the format [qty][label], with each item on a new line, e.g. "
+        + "2A on one line and 3C on the next."
+    | s ->
+        $"Oops! The following items had invalid quantities: {s}"

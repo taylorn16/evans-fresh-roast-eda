@@ -4,6 +4,8 @@
 - Error handling/messaging/logging -- basically everywhere!
 - Split up roast domain file into several modules
 - refactor/split up roast repository functions into several modules
+- LOGGING!
+- Verify incoming twilio requests are actually coming from twilio
 
 ## Incoming SMS Webhook Mappings
 
