@@ -2,21 +2,28 @@ namespace EvansFreshRoast.Api
 
 [<CLIMutable>]
 type Twilio =
-  { AccountSid: string
-    AuthToken: string
-    FromPhoneNumber: string }
+    { AccountSid: string
+      AuthToken: string
+      FromPhoneNumber: string }
 
 [<CLIMutable>]
 type RabbitMq =
-  { Hostname: string
-    Port: int
-    Username: string
-    Password: string }
+    { Hostname: string
+      Port: int
+      Username: string
+      Password: string }
+
+[<CLIMutable>]
+type ConnectionStringParams =
+    { Host: string
+      Username: string
+      Password: string
+      Database: string }
 
 [<CLIMutable>]
 type ConnectionStrings =
-    { EventStore: string
-      ReadStore: string }
+    { EventStore: ConnectionStringParams
+      ReadStore: ConnectionStringParams }
 
 [<CLIMutable>]
 type Settings =

@@ -31,7 +31,6 @@ type RoastDetailedView =
       SentRemindersCount: NonNegativeInt }
 
 module RoastRepository =
-    
     let private awaitIgnoreOk task =
         async {
             return! task
@@ -79,7 +78,7 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error inserting roast."
+                | ex -> return Error <| exn("Error inserting roast.", ex)
             }
 
         | OrderPlaced order ->
@@ -126,7 +125,8 @@ module RoastRepository =
                           insertOrderLineItemSql, insertOrderLineItemParams ]
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error adding order to roast."
+                | ex ->
+                    return Error <| exn("Error adding order to roast.", ex)
             }
 
         | OrderCancelled customerId ->
@@ -157,7 +157,8 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error deleting cancelled order."
+                | ex ->
+                    return Error <| exn("Error deleting cancelled order.", ex)
             }
 
         | OrderConfirmed(customerId, invoiceAmt) ->
@@ -207,12 +208,13 @@ module RoastRepository =
                     |> Async.bind (
                         Option.map insertInvoice
                         >> Option.defaultValue (
-                            Error "No order found for customer id."
+                            Error <| exn("No order found for customer id.")
                             |> Async.lift
                         )
                     )
                 with
-                | _ -> return Error "Error creating invoice."
+                | ex ->
+                    return Error <| exn("Error creating invoice.", ex)
             }
 
         | InvoicePaid(customerId, paymentMethod) ->
@@ -240,7 +242,8 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error setting payment method on invoice"
+                | ex ->
+                    return Error <| exn("Error setting payment method on invoice", ex)
             }
 
         | ReminderSent ->
@@ -257,7 +260,8 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error incrementing the count of reminders sent."
+                | ex ->
+                    return Error <| exn("Error incrementing the count of reminders sent.", ex)
             }
 
         | CoffeesAdded coffeeIds ->
@@ -277,7 +281,8 @@ module RoastRepository =
                     ]
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error adding coffees to roast."
+                | ex ->
+                    return Error <| exn("Error adding coffees to roast.", ex)
             }
 
         | CoffeesRemoved coffeeIds ->
@@ -297,7 +302,8 @@ module RoastRepository =
                     ]
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error removing coffee ids."
+                | ex ->
+                    return Error <| exn("Error removing coffee ids.", ex)
             }
 
         | CustomersAdded customerIds ->
@@ -318,7 +324,8 @@ module RoastRepository =
                     |> awaitIgnoreOk
                     
                 with
-                | _ -> return Error "Error adding customers to roast."
+                | ex ->
+                    return Error <| exn("Error adding customers to roast.", ex)
             }
 
         | CustomersRemoved customerIds ->
@@ -338,7 +345,8 @@ module RoastRepository =
                     ]
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error removing customer ids."
+                | ex ->
+                    return Error <| exn("Error removing customer ids.", ex)
             }
 
         | RoastDatesChanged (roastDate, orderByDate) ->
@@ -362,7 +370,8 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error updating roast dates."
+                | ex ->
+                    return Error <| exn("Error updating roast dates.", ex)
             }
 
         | RoastStarted _ ->
@@ -379,7 +388,8 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error updating roast status."
+                | ex ->
+                    return Error <| exn("Error updating roast status.", ex)
             }
 
         | RoastCompleted ->
@@ -396,7 +406,8 @@ module RoastRepository =
                     |> Sql.executeNonQueryAsync
                     |> awaitIgnoreOk
                 with
-                | _ -> return Error "Error updating roast status."
+                | ex ->
+                    return Error <| exn("Error updating roast status.", ex)
             }
 
     type private DbRoastRow =

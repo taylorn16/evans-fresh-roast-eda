@@ -14,8 +14,8 @@ type CoffeeWorkflowDependencies =
       GetAllCoffees: LoadAllAggregates<Coffee> }
 
 module Coffees =
-    let compose eventStoreConnectionString readStoreConnectionString =
+    let compose rabbitMqConnectionFactory eventStoreConnectionString readStoreConnectionString =
         { LoadEvents = loadCoffeeEvents eventStoreConnectionString
-          SaveEvent = saveCoffeeEvent eventStoreConnectionString
+          SaveEvent = saveCoffeeEvent eventStoreConnectionString rabbitMqConnectionFactory
           GetCoffee = getCoffee readStoreConnectionString
           GetAllCoffees = fun () -> getAllCoffees readStoreConnectionString }

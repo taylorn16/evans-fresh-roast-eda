@@ -14,6 +14,11 @@ module CustomerName =
 
     let value = apply id
 
+    let firstName =
+        let splitOnSpaces (s: string) = s.Split(" ")
+        
+        apply (splitOnSpaces >> Array.head)
+
 type CustomerStatus =
     | Unconfirmed
     | Subscribed

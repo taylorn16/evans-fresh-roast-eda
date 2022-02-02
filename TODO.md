@@ -6,27 +6,18 @@
 - refactor/split up roast repository functions into several modules
 - LOGGING!
 - Verify incoming twilio requests are actually coming from twilio
+- Ignore invalid coffee reference IDs in order text
+- Refactor text parser to not look at active roasts
+- Testing strategy
 
-## Incoming SMS Webhook Mappings
+- Sketch some basic wireframes of front-end
 
-### "CANCEL"
+## Frontend notes
 
-- Cancel an open order on the open roast (if one exists)
-- Text should give the customer the option to place a new order if they want
-- Can't cancel once a roast is closed; should tell them to reach out to evan directly
-
-### "CONFIRM"
-
-- Confirm an unconfirmed order on the open roast (if one exists)
-- Essentially creates an invoice for the order
-- Text should give them an option to cancel
-
-### Ordering
-
-- In the format:
-2 A
-1 B
-2 D
-
-- Text will respond with a price/summary and ask them to confirm
-- When the roast is closed, a notification text will be sent
+Thoth.Json
+Thoth.Fetch or Fable.SimpleHttp?
+Shoelace Web Components
+Paket
+Elmish
+Vite? (Instead of webpack)
+Femto

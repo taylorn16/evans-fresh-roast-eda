@@ -42,7 +42,8 @@ module CoffeeRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ -> return Error "Error inserting new coffee read model row."
+                | ex ->
+                    return Error <| exn("Error inserting new coffee read model row.", ex)
             }
 
         | Updated coffee ->
@@ -72,7 +73,10 @@ module CoffeeRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ -> return Error "Error updating coffee read model row (name?, description?, pricePerBag?, weightPerBag?)."
+                | ex ->
+                    return Error <| exn(
+                        "Error updating coffee read model row (name?, description?, pricePerBag?, weightPerBag?).",
+                        ex)
             }
 
         | Activated ->
@@ -91,8 +95,8 @@ module CoffeeRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ ->
-                    return Error "Error updating coffee read model row (status)."
+                | ex ->
+                    return Error <| exn("Error updating coffee read model row (status).", ex)
             }
 
         | Deactivated ->
@@ -111,8 +115,8 @@ module CoffeeRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ ->
-                    return Error "Error updating coffee read model row (status)."
+                | ex ->
+                    return Error <| exn("Error updating coffee read model row (status).", ex)
             }
 
     let decodeStatus: Decoder<CoffeeStatus> =

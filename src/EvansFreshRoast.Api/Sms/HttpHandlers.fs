@@ -51,14 +51,17 @@ let genericTwilioError (err: string): HttpHandler =
         let logger = ctx.GetLogger("genericTwilioError")
         logger.LogError(err)
 
-        let msg = "Uh oh! Something went wrong on our end. Please reach out to Evan directly."
+        let msg =
+            "Uh oh! Something went wrong on our end. "
+            + "Please try again in a few minutes, "
+            + "or just reach out to Evan directly."
         return! (sendTwilioResponse msg) next ctx
     }
 
 let orderParsingTwilioError (incomingMsg: SmsMsg) (respMsg: string): HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) -> task {
         let logger = ctx.GetLogger("orderParsingTwilioError")
-        logger.LogDebug($"Failed to parse order: \"%s{SmsMsg.value incomingMsg}\". Response given: \"{respMsg}\"")
+        logger.LogDebug($"Failed to parse order: \"%s{SmsMsg.value incomingMsg}\". Response given: \"%s{respMsg}\"")
 
         return! (sendTwilioResponse respMsg) next ctx
     }
@@ -114,7 +117,7 @@ let receiveIncomingSms (compositionRoot: CompositionRoot): HttpHandler =
                         match parseErr with
                         | NoOpenRoast attemptedAction ->
                             $"Sorry, all roasts are closed at the moment, so you can't {attemptedAction}. "
-                            + "Please reach out to Evan directly if you need to."
+                            + "Please reach out to Evan directly if you need help with an order."
                             
                         | LineParseErrors lineErrs ->
                             foldLineParseErrors lineErrs

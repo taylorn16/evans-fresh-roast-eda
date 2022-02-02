@@ -30,7 +30,7 @@ type EventConsumerBase<'State, 'Event>
 
     let cts = new CancellationTokenSource()
 
-    abstract member handleEvent: DomainEvent<'State, 'Event> -> Async<Result<unit, string>>
+    abstract member handleEvent: DomainEvent<'State, 'Event> -> Async<Result<unit, exn>>
 
     interface IHostedService with
         member this.StartAsync(_: CancellationToken) = task {
@@ -64,7 +64,7 @@ type EventConsumerBase<'State, 'Event>
                             ack()
                             return ()
                         | Error e ->
-                            logger.LogError(e)
+                            logger.LogError(e, "Exception in event consumer handleEvent.")
                             ack()
                             return ()
                     | Error (DeserializationError e) ->

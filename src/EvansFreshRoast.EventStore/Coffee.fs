@@ -6,11 +6,12 @@ open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Coffee
 open EvansFreshRoast.Utils
+open RabbitMQ.Client
 
 let loadCoffeeEvents connectionString =
     Db.loadEvents connectionString decodeCoffeeEvent DatabaseError SerializationError
 
-let saveCoffeeEvent connectionString (event: DomainEvent<Coffee, Event>) =
+let saveCoffeeEvent connectionString (connectionFactory: IConnectionFactory) (event: DomainEvent<Coffee, Event>) =
     let getEventName =
         function
         | Created _ -> "Coffee Created"
@@ -21,6 +22,6 @@ let saveCoffeeEvent connectionString (event: DomainEvent<Coffee, Event>) =
     Db.saveEvent connectionString encodeCoffeeEvent "Coffee" getEventName DatabaseError event
     |> Async.map (
         Result.bind (fun _ -> 
-            Publisher.publishCoffeeEvent event
+            Publisher.publishCoffeeEvent connectionFactory event
             |> Result.mapError PublishingError)
     )

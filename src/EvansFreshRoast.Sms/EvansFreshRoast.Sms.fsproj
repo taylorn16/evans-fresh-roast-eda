@@ -16,6 +16,7 @@
     <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Domain\EvansFreshRoast.Domain.fsproj" />
     <ProjectReference Include="..\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.ReadModels\EvansFreshRoast.ReadModels.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

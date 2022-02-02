@@ -15,7 +15,7 @@ module Twilio =
 
                 return Ok ()
             with
-            | _ ->
-                return Error "Sending SMS failed, yo."
+            | ex ->
+                return Error ex
         }
         

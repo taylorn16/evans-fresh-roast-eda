@@ -16,8 +16,8 @@ type RoastWorkflowDependencies =
       GetAllRoasts: LoadAllAggregates<Coffee> -> Async<list<RoastSummaryView>> }
 
 module Roasts =
-    let compose eventStoreConnectionString readStoreConnectionString =
+    let compose rabbitMqConnectionFactory eventStoreConnectionString readStoreConnectionString =
         { LoadEvents = loadRoastEvents eventStoreConnectionString
-          SaveEvent = saveRoastEvent eventStoreConnectionString
+          SaveEvent = saveRoastEvent eventStoreConnectionString rabbitMqConnectionFactory
           GetRoast = getRoast readStoreConnectionString
           GetAllRoasts = getAllRoasts readStoreConnectionString }

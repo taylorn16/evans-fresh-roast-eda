@@ -8,6 +8,7 @@ open EvansFreshRoast.Utils
 open NodaTime
 open RabbitMQ.Client
 open EvansFreshRoast.ReadModels
+open Npgsql.FSharp
 
 type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
@@ -59,25 +60,24 @@ type CompositionRoot =
 module CompositionRoot =
     let compose (settings: Settings) =
         let eventStoreConnectionString =
-            ConnectionString.create settings.ConnectionStrings.EventStore
+            let stgs = settings.ConnectionStrings.EventStore
+
+            Sql.host stgs.Host
+            |> Sql.username stgs.Username
+            |> Sql.password stgs.Password
+            |> Sql.database stgs.Database
+            |> Sql.formatConnectionString
+            |> ConnectionString.create
         
         let readStoreConnectionString =
-            ConnectionString.create settings.ConnectionStrings.ReadStore
+            let stgs = settings.ConnectionStrings.ReadStore
 
-        let customersWorkflow =
-            Leaves.Customers.compose
-                eventStoreConnectionString
-                readStoreConnectionString
-
-        let coffeesWorkflow =
-            Leaves.Coffees.compose
-                eventStoreConnectionString
-                readStoreConnectionString
-        
-        let roastsWorkflow =
-            Leaves.Roasts.compose
-                eventStoreConnectionString
-                readStoreConnectionString
+            Sql.host stgs.Host
+            |> Sql.username stgs.Username
+            |> Sql.password stgs.Password
+            |> Sql.database stgs.Database
+            |> Sql.formatConnectionString
+            |> ConnectionString.create
 
         let rabbitMqConnectionFactory = ConnectionFactory(
             HostName = settings.RabbitMq.Hostname,
@@ -85,6 +85,24 @@ module CompositionRoot =
             Password = settings.RabbitMq.Password,
             Port = settings.RabbitMq.Port,
             AutomaticRecoveryEnabled = true)
+
+        let customersWorkflow =
+            Leaves.Customers.compose
+                rabbitMqConnectionFactory
+                eventStoreConnectionString
+                readStoreConnectionString
+
+        let coffeesWorkflow =
+            Leaves.Coffees.compose
+                rabbitMqConnectionFactory
+                eventStoreConnectionString
+                readStoreConnectionString
+        
+        let roastsWorkflow =
+            Leaves.Roasts.compose
+                rabbitMqConnectionFactory
+                eventStoreConnectionString
+                readStoreConnectionString        
 
         { LoadCustomerEvents = customersWorkflow.LoadEvents
           SaveCustomerEvent = customersWorkflow.SaveEvent

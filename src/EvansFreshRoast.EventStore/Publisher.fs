@@ -13,13 +13,12 @@ open EvansFreshRoast.Domain
 module Publisher =
     let exchangeName = "domain.events"
 
-    let connectionFactory = ConnectionFactory(
-        HostName = "rabbitmq", //"rabbitmq"
-        UserName = "guest",
-        Password = "guest",
-        Port = 5672)
-
-    let private publishEvent route (encoder: Encoder<'Event>) (domainEvent: DomainEvent<_, 'Event>) =
+    let private publishEvent
+        route
+        (encoder: Encoder<'Event>)
+        (connectionFactory: IConnectionFactory)
+        (domainEvent: DomainEvent<_, 'Event>)
+        =
         use connection = connectionFactory.CreateConnection()
         use channel = connection.CreateModel()
 
@@ -35,11 +34,11 @@ module Publisher =
         with ex ->
             Error ex
 
-    let publishRoastEvent: DomainEvent<Roast, Roast.Event> -> Result<unit, exn> =
+    let publishRoastEvent: IConnectionFactory -> DomainEvent<Roast, Roast.Event> -> Result<unit, exn> =
         publishEvent "domain.events.roast" encodeRoastEvent
 
-    let publishCoffeeEvent: DomainEvent<Coffee, Coffee.Event> -> Result<unit, exn> =
+    let publishCoffeeEvent: IConnectionFactory -> DomainEvent<Coffee, Coffee.Event> -> Result<unit, exn> =
         publishEvent "domain.events.coffee" encodeCoffeeEvent
 
-    let publishCustomerEvent: DomainEvent<Customer, Customer.Event> -> Result<unit, exn> =
+    let publishCustomerEvent: IConnectionFactory -> DomainEvent<Customer, Customer.Event> -> Result<unit, exn> =
         publishEvent "domain.events.customer" encodeCustomerEvent

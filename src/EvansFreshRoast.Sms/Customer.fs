@@ -6,7 +6,7 @@ open EvansFreshRoast.Domain.Customer
 open EvansFreshRoast.Utils
 
 let handleEvent
-    (sendSms: UsPhoneNumber -> SmsMsg -> Async<Result<unit, string>>)
+    (sendSms: UsPhoneNumber -> SmsMsg -> Async<Result<unit, exn>>)
     (getCustomer: Id<Customer> -> Async<option<Id<Customer> * Customer>>)
     (event: DomainEvent<Customer, Event>)
     =

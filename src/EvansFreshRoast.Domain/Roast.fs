@@ -74,6 +74,17 @@ type Order =
     | UnconfirmedOrder of OrderDetails
     | ConfirmedOrder of OrderDetails * Invoice
 
+module Order =
+    let getCustomerId =
+        function
+        | UnconfirmedOrder details -> details.CustomerId
+        | ConfirmedOrder(details, _) -> details.CustomerId
+
+    let getLineItems =
+        function
+        | UnconfirmedOrder details -> details.LineItems
+        | ConfirmedOrder(details, _) -> details.LineItems
+
 type RoastStatus =
     | NotPublished
     | Open

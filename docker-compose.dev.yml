@@ -7,8 +7,8 @@ services:
       - "8080:80"
     mem_limit: 528m
     cpus: 0.5
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+    env_file:
+      - ./dev.env
 
   eventstoredb:
     build: ./src/EvansFreshRoast.EventStore

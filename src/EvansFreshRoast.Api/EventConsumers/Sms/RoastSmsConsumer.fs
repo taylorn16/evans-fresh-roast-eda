@@ -22,16 +22,10 @@ type RoastSmsConsumer
     )
 
     override _.handleEvent event =
-        let getRoastCustomerIds roastId = async {
-            let! roast = compositionRoot.GetRoast roastId
-            return roast
-            |> Option.map (fun r -> r.Customers)
-        }
-        
         Roast.handleEvent
             (Twilio.sendSms compositionRoot.TwilioFromPhoneNumber)
             compositionRoot.GetAllCoffees
-            getRoastCustomerIds
+            compositionRoot.GetRoast
             compositionRoot.GetAllCustomers
             compositionRoot.GetCustomer
             event

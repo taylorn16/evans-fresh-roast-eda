@@ -16,9 +16,9 @@ type CustomerWorkflowDependencies =
       GetCustomerByPhoneNumber: UsPhoneNumber -> Async<option<Id<Customer> * Customer>> }
 
 module Customers =
-    let compose eventStoreConnectionString readStoreConnectionString =
+    let compose rabbitMqConnectionFactory eventStoreConnectionString readStoreConnectionString =
         { LoadEvents = loadCustomerEvents eventStoreConnectionString
-          SaveEvent = saveCustomerEvent eventStoreConnectionString
+          SaveEvent = saveCustomerEvent eventStoreConnectionString rabbitMqConnectionFactory
           GetCustomer = getCustomer readStoreConnectionString
           GetAllCustomers = fun () -> getAllCustomers readStoreConnectionString
           GetCustomerByPhoneNumber = getCustomerByPhoneNumber readStoreConnectionString }

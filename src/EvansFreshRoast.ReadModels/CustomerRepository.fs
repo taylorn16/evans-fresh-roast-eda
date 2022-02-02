@@ -40,7 +40,8 @@ module CustomerRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ -> return Error "Error inserting new customer read model row."
+                | ex ->
+                    return Error <| exn("Error inserting new customer read model row.", ex)
             }
 
         | Updated fields ->
@@ -66,7 +67,8 @@ module CustomerRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ -> return Error "Error updating customer read model row (name?, phoneNumber?)."
+                | ex ->
+                    return Error <| exn("Error updating customer read model row (name?, phoneNumber?).", ex)
             }
         
         | Event.Subscribed ->
@@ -85,8 +87,8 @@ module CustomerRepository =
                     |> Async.Ignore
                     |> Async.map Ok
                 with
-                | _ ->
-                    return Error "Error updating customer read model row (status)."
+                | ex ->
+                    return Error <| exn("Error updating customer read model row (status).", ex)
             }
 
         | Event.Unsubscribed ->
@@ -105,8 +107,8 @@ module CustomerRepository =
                     |> Async.map (fun _ -> ())
                     |> Async.map Ok
                 with
-                | _ ->
-                    return Error "Error updating customer read model row (status)."
+                | ex ->
+                    return Error <| exn("Error updating customer read model row (status).", ex)
             }
 
     let decodeStatus: Decoder<CustomerStatus> =
