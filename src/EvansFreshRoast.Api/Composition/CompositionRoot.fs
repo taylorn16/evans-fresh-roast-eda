@@ -9,6 +9,7 @@ open NodaTime
 open RabbitMQ.Client
 open EvansFreshRoast.ReadModels
 open Npgsql.FSharp
+open EvansFreshRoast.Auth
 
 type CompositionRoot =
     { LoadCustomerEvents: LoadEvents<Customer, Customer.Event, EventStoreError>
@@ -29,7 +30,8 @@ type CompositionRoot =
       RabbitMqConnectionFactory: IConnectionFactory
       TwilioFromPhoneNumber: UsPhoneNumber
       ReadStoreConnectionString: ConnectionString
-      TwilioAccountSid: string }
+      TwilioAccountSid: string
+      JwtConfig: JwtConfig }
     member this.CustomerCommandHandler with get () =
         Aggregate.createHandler
             Customer.aggregate
@@ -122,4 +124,5 @@ module CompositionRoot =
           RabbitMqConnectionFactory = rabbitMqConnectionFactory
           TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk
           ReadStoreConnectionString = readStoreConnectionString
-          TwilioAccountSid = settings.Twilio.AccountSid }
+          TwilioAccountSid = settings.Twilio.AccountSid
+          JwtConfig = settings.Jwt }

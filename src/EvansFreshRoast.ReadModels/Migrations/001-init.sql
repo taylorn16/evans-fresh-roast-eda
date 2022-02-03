@@ -44,3 +44,23 @@ CREATE TABLE order_line_items(
   , quantity INT NOT NULL
   , CONSTRAINT fk_order FOREIGN KEY(order_fk) REFERENCES orders(order_id)
 );
+
+CREATE TABLE users(
+    user_id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4()
+  , user_name TEXT NOT NULL
+  , user_phone_number VARCHAR(12) NOT NULL
+);
+
+CREATE INDEX idx_user_phn ON users(user_phone_number);
+
+CREATE TABLE user_logins(
+    user_login_id UUID NOT NULL PRIMARY KEY
+  , login_code VARCHAR(9) NOT NULL
+  , login_code_expiration TIMESTAMPTZ NOT NULL
+  , user_fk UUID NOT NULL
+  , is_validated BIT NOT NULL DEFAULT 0::BIT
+  , CONSTRAINT fk_user FOREIGN KEY(user_fk) REFERENCES users(user_id)
+);
+
+INSERT INTO users(user_name, user_phone_number)
+VALUES('', '');

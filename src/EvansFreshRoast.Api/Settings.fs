@@ -1,4 +1,5 @@
 namespace EvansFreshRoast.Api
+open EvansFreshRoast.Auth
 
 [<CLIMutable>]
 type Twilio =
@@ -29,4 +30,5 @@ type ConnectionStrings =
 type Settings =
     { ConnectionStrings: ConnectionStrings
       RabbitMq: RabbitMq
-      Twilio: Twilio }
+      Twilio: Twilio
+      Jwt: JwtConfig }

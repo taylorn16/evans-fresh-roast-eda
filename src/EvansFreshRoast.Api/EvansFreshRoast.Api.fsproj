@@ -6,6 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Giraffe" Version="6.0.0-alpha-2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.1" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.1" />
     <PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.2.2" />
     <PackageReference Include="Twilio" Version="5.70.0" />
@@ -31,6 +33,7 @@
     <Compile Include="Roasts/Router.fs" />
     <Compile Include="Sms/HttpHandlers.fs" />
     <Compile Include="Sms/Router.fs" />
+    <Compile Include="Auth.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
     <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />
@@ -48,5 +51,6 @@
     <ProjectReference Include="..\EvansFreshRoast.ReadModels\EvansFreshRoast.ReadModels.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Sms\EvansFreshRoast.Sms.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Auth\EvansFreshRoast.Auth.fsproj" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@ namespace EvansFreshRoast.Api
 
 open System
 open Microsoft.AspNetCore.Builder
+open Microsoft.AspNetCore.Authentication.JwtBearer
 open Microsoft.AspNetCore.Cors.Infrastructure
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Hosting
@@ -16,19 +17,28 @@ open EvansFreshRoast.Api.EventConsumers.Sms
 open Microsoft.Extensions.Configuration
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Api
+open EvansFreshRoast.Api.Auth
 open RabbitMQ.Client
+open Microsoft.IdentityModel.Tokens
+open System.Text
 
 module Program =
     // ---------------------------------
     // Web app
     // ---------------------------------
 
+    let authenticate: HttpHandler =
+        requiresAuthentication
+            (challenge JwtBearerDefaults.AuthenticationScheme >=> text "Please authenticate.")
+
     let webApp (compositionRoot: CompositionRoot) =
         choose [
-            subRoute "/api/v1/coffees" (Coffees.Router.router compositionRoot)
-            subRoute "/api/v1/customers" (Customers.Router.router compositionRoot)
-            subRoute "/api/v1/roasts" (Roasts.Router.router compositionRoot)
-            subRoute "/api/v1/_twiliosms" (Sms.Router.router compositionRoot)
+            subRoute "/api/v1/coffees" (authenticate >=> Coffees.Router.router compositionRoot)
+            subRoute "/api/v1/customers" (authenticate >=> Customers.Router.router compositionRoot)
+            subRoute "/api/v1/roasts" (authenticate >=> Roasts.Router.router compositionRoot)
+            subRoute "/api/v1/_twiliosms" (authenticate >=> Sms.Router.router compositionRoot)
+            GET >=> routeCix "/api/v1/authcode(/?)" >=> getLoginCode compositionRoot
+            POST >=> routeCix "/api/v1/login(/?)" >=> login compositionRoot
             setStatusCode 404 >=> text "Not Found"
         ]
 
@@ -65,9 +75,10 @@ module Program =
                 .UseGiraffeErrorHandler(errorHandler)
                 .UseHttpsRedirection())
             .UseCors(configureCors)
+            .UseAuthentication()
             .UseGiraffe(webApp compositionRoot)
 
-    let configureServices (compositionRoot: CompositionRoot) (services: IServiceCollection) =
+    let configureServices (settings: Settings) (compositionRoot: CompositionRoot) (services: IServiceCollection) =
         services.AddSingleton<CompositionRoot>(compositionRoot) |> ignore
         services.AddSingleton<IConnectionFactory>(fun sp ->
             sp.GetRequiredService<CompositionRoot>().RabbitMqConnectionFactory) |> ignore
@@ -88,6 +99,19 @@ module Program =
         services.AddSingleton<Json.ISerializer>(SystemTextJson.Serializer(serializerOptions))
         |> ignore
 
+        services
+            .AddAuthentication(fun opt ->
+                opt.DefaultAuthenticateScheme <- JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(fun opt ->
+                let key = SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Jwt.SecretKey))
+
+                opt.TokenValidationParameters <- TokenValidationParameters(
+                    IssuerSigningKey = key,
+                    ValidateIssuer = true,
+                    ValidIssuer = settings.Jwt.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = settings.Jwt.Audience)
+            ) |> ignore
         ()
 
     let configureLogging (builder: ILoggingBuilder) =
@@ -116,7 +140,7 @@ module Program =
             .ConfigureWebHostDefaults(fun webHostBuilder ->
                 webHostBuilder
                     .Configure(Action<IApplicationBuilder> (configureApp compositionRoot))
-                    .ConfigureServices(Action<IServiceCollection> (configureServices compositionRoot))
+                    .ConfigureServices(Action<IServiceCollection> (configureServices settings compositionRoot))
                     .ConfigureLogging(configureLogging)
                 |> ignore)
             .Build()
