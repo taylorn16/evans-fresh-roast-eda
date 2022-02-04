@@ -1,13 +1,14 @@
 - rename and reorganize Utils project
 - flesh out rest of customers api
-- Error handling/messaging/logging -- basically everywhere!
+- Error handling/messaging/logging in api endpoints
 - Split up roast domain file into several modules
 - refactor/split up roast repository functions into several modules
 - LOGGING!
 - Verify incoming twilio requests are actually coming from twilio?
+    - https://www.twilio.com/docs/usage/tutorials/how-to-secure-your-csharp-aspnet-core-app-by-validating-incoming-twilio-requests
 - Ignore invalid coffee reference IDs in order text
-- Refactor text parser to not look at active roasts
-- Testing strategy
+- Refactor incoming sms parser to not look at active roasts
+- Testing strategy??
 
 - Sketch some basic wireframes of front-end
 

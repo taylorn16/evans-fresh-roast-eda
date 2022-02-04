@@ -14,6 +14,7 @@ let router compositionRoot =
         ]
         PUT >=> choose [
             routeCif "/%O/activate" (activateCoffee compositionRoot)
+            routeCif "/%O/deactivate" (deactivateCoffee compositionRoot)
             routeCif "/%O" (putCoffee compositionRoot)
         ]
     ]

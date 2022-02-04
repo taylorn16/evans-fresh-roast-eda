@@ -82,7 +82,11 @@ let login (compositionRoot: CompositionRoot): HttpHandler =
                 match! validateUserLogin userLogin.Id with
                 | Ok userId ->
                     let token = Jwt.create compositionRoot.JwtConfig userId
-                    return! Successful.ok (text token) next ctx
+                    
+                    let setCookies =
+                        setHttpHeader "Set-Cookie" $"auth_token={token}; SameSite=Strict; Secure; HttpOnly; Max-Age=900"
+                        >=> setHttpHeader "Set-Cookie" $"logged_in=true; SameSite=Strict; Secure; Max-Age=900"
+                    return! (setCookies >=> Successful.ok (text token)) next ctx
 
                 | Error ex ->
                     logger.LogError(ex, "Error validating user ")

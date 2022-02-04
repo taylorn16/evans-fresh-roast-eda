@@ -5,11 +5,27 @@ open EvansFreshRoast.Api.Models
 open EvansFreshRoast.Api.Coffees.RequestDecoders
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Domain
+open EvansFreshRoast.Domain.Coffee
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Utils
 open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.Logging
 open Giraffe
+
+let withCoffeeId (id: System.Guid) (createHandler: Id<Coffee> -> HttpHandler): HttpHandler = 
+    fun next ctx -> task {
+        match Id.create id with
+        | Ok roastId ->
+            return! (createHandler roastId) next ctx
+
+        | Error _ ->
+            return! RequestErrors.BAD_REQUEST "Invalid coffee id." next ctx
+    }
+
+let handleCommandAsync (compositionRoot: CompositionRoot) (ctx: HttpContext) id cmd =
+    Async.StartAsTask(
+        compositionRoot.CoffeeCommandHandler id cmd,
+        cancellationToken = ctx.RequestAborted)
 
 let getCoffees (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
     task {
@@ -44,7 +60,7 @@ let getCoffee (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpC
 
                 return! Successful.OK coffeeDto next ctx
             | None ->
-                return! RequestErrors.NOT_FOUND "Coffee not found" next ctx
+                return! RequestErrors.NOT_FOUND "Coffee not found." next ctx
         
         | Error e ->
             return! RequestErrors.BAD_REQUEST e next ctx
@@ -52,66 +68,63 @@ let getCoffee (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpC
 
 let putCoffee (compositionRoot: CompositionRoot) id: HttpHandler =
     fun cmd (next: HttpFunc) (ctx: HttpContext) -> task {
-        let coffeeId = Id.create id |> unsafeAssertOk // TODO: don't assert ok!
+        let coffeeId = Id.create id |> unsafeAssertOk
 
-        let handleCommandTask =
-            Async.StartAsTask(
-                cmd |> compositionRoot.CoffeeCommandHandler coffeeId,
-                cancellationToken = ctx.RequestAborted)
-
-        match! handleCommandTask with
+        match! handleCommandAsync compositionRoot ctx coffeeId cmd with
         | Ok event ->
-            let responseText =
-                sprintf
-                    "Coffee updated. Event Id = %A; Coffee Id = %A"
-                    (Id.value event.Id)
-                    (Id.value event.AggregateId)
+            let response = {| eventId = event.Id |> Id.value |}
+            return! Successful.ACCEPTED response next ctx
 
-            return! Successful.accepted (text responseText) next ctx
+        | Error (DomainError NoUpdateFieldsSupplied) ->
+            return! RequestErrors.BAD_REQUEST "Must specify at least one field to update." next ctx
 
         | Error handlerErr ->
-            ctx.GetLogger("putCoffee").LogError($"{handlerErr}");
+            let logger = ctx.GetLogger("putCoffee")
+            logger.LogError($"{handlerErr}")
             return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
     }
     |> useRequestDecoder decodeUpdateCoffeeCmd
 
 let postCoffee (compositionRoot: CompositionRoot): HttpHandler =
     fun cmd (next: HttpFunc) (ctx: HttpContext) -> task {
-        let handleCommandTask =
-            Async.StartAsTask(
-                cmd |> compositionRoot.CoffeeCommandHandler (Id.newId()),
-                cancellationToken = ctx.RequestAborted)
-
-        match! handleCommandTask with
+        match! handleCommandAsync compositionRoot ctx (Id.newId()) cmd with
         | Ok event ->
-            let responseText =
-                sprintf
-                    "Coffee created. Event Id = %A; Coffee Id = %A"
-                    (Id.value event.Id)
-                    (Id.value event.AggregateId)
+            let response =
+                {| coffeeId = event.AggregateId |> Id.value
+                   eventId = event.Id |> Id.value |}
+            return! Successful.ACCEPTED response next ctx
 
-            return! Successful.accepted (text responseText) next ctx
         | Error handlerErr ->
+            let logger = ctx.GetLogger("postCoffee")
+            logger.LogError($"{handlerErr}")
             return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
     }
     |> useRequestDecoder decodeCreateCoffeeCmd
 
 let activateCoffee (compositionRoot: CompositionRoot) id: HttpHandler =
-    fun next ctx -> task {
-        match Id.create id with
-        | Ok coffeeId ->
-            let handleCommandTask =
-                Async.StartAsTask(
-                    (compositionRoot.CoffeeCommandHandler)
-                        coffeeId 
-                        Coffee.Command.Activate,
-                    cancellationToken = ctx.RequestAborted)
-                
-            match! handleCommandTask with
-            | Ok evt ->
-                return! Successful.accepted (text "activated") next ctx
-            | Error err ->
-                return! ServerErrors.internalError (text "handler error") next ctx
-        | Error err ->
-            return! ServerErrors.internalError (text "invalid id") next ctx
+    fun coffeeId next (ctx: HttpContext) -> task {
+        match! handleCommandAsync compositionRoot ctx coffeeId Activate with
+        | Ok evt ->
+            let response = {| eventId = evt.Id |> Id.value |}
+            return! Successful.ACCEPTED response next ctx
+
+        | Error handlerErr ->
+            let logger = ctx.GetLogger("activateCoffee")
+            logger.LogError($"{handlerErr}")
+            return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
     }
+    |> withCoffeeId id
+
+let deactivateCoffee (compositionRoot: CompositionRoot) id: HttpHandler =
+    fun coffeeId next (ctx: HttpContext) -> task {
+        match! handleCommandAsync compositionRoot ctx coffeeId Deactivate with
+        | Ok evt ->
+            let response = {| eventId = evt.Id |> Id.value |}
+            return! Successful.ACCEPTED response next ctx
+            
+        | Error handlerErr ->
+            let logger = ctx.GetLogger("deactivateCoffee")
+            logger.LogError($"{handlerErr}")
+            return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
+    }
+    |> withCoffeeId id

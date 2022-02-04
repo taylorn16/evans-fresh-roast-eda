@@ -111,6 +111,22 @@ module Program =
                     ValidIssuer = settings.Jwt.Issuer,
                     ValidateAudience = true,
                     ValidAudience = settings.Jwt.Audience)
+
+                let events = JwtBearerEvents()
+                events.OnMessageReceived <- fun ctx ->
+                    task {
+                        let token =
+                            ctx.Request.Cookies["auth_token"]
+                            |> Option.ofObj
+                            |> Option.defaultValue (
+                                ctx.Request.Headers["Authentication"].ToArray()
+                                |> Array.tryHead
+                                |> Option.defaultValue ""
+                            )
+                        
+                        ctx.Token <- token
+                    }
+                opt.Events <- events
             ) |> ignore
         ()
 
