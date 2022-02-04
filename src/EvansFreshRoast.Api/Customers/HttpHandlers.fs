@@ -2,16 +2,33 @@ module EvansFreshRoast.Api.Customers.HttpHandlers
 
 open Giraffe
 open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Logging
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Api.Models
 open EvansFreshRoast.Domain
+open EvansFreshRoast.Domain.Customer
 open EvansFreshRoast.Utils
 open EvansFreshRoast.Api.HttpHandlers
 open EvansFreshRoast.Api.Customers.RequestDecoders
 
-let getCustomers (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpContext) =
-    task {
+let withCustomerId (id: System.Guid) (createHandler: Id<Customer> -> HttpHandler): HttpHandler = 
+    fun next ctx -> task {
+        match Id.create id with
+        | Ok roastId ->
+            return! (createHandler roastId) next ctx
+
+        | Error _ ->
+            return! RequestErrors.BAD_REQUEST "Invalid customer id." next ctx
+    }
+
+let handleCommandAsync (compositionRoot: CompositionRoot) (ctx: HttpContext) id cmd =
+    Async.StartAsTask(
+        compositionRoot.CustomerCommandHandler id cmd,
+        cancellationToken = ctx.RequestAborted)
+
+let getCustomers (compositionRoot: CompositionRoot) =
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
         let! customers = Async.StartAsTask(
             compositionRoot.GetAllCustomers(),
             cancellationToken=ctx.RequestAborted)
@@ -26,53 +43,49 @@ let getCustomers (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpC
         return! Successful.OK customerDtos next ctx
     }
 
-let getCustomer (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpContext) =
-    let getValidationErrorHandler error =
-        let genericErrorHandler =
-            ServerErrors.INTERNAL_ERROR "Something went wrong."
+let getCustomer (compositionRoot: CompositionRoot) id =
+    fun customerId (next: HttpFunc) (ctx: HttpContext) -> task {
+        match! Async.StartAsTask(compositionRoot.GetCustomer customerId, cancellationToken=ctx.RequestAborted) with
+        | Some (customerId, customer) ->
+            let customerDto =
+                { Id = Id.value customerId
+                  Name = CustomerName.value customer.Name
+                  PhoneNumber = UsPhoneNumber.format customer.PhoneNumber }
 
-        match error with
-        | FrameworkTypeError err ->
-            match err with
-            | IdIsEmpty -> RequestErrors.BAD_REQUEST "Customer id cannot be empty."
-            | _ -> genericErrorHandler
-        | _ -> genericErrorHandler
-    
-    task {
-        match compositionRoot.GetCustomer <!> (Id.create id) with
-        | Ok getCustomer ->
-            match! Async.StartAsTask(getCustomer, cancellationToken=ctx.RequestAborted) with
-            | Some (customerId, customer) ->
-                let customerDto =
-                    { Id = Id.value customerId
-                      Name = CustomerName.value customer.Name
-                      PhoneNumber = UsPhoneNumber.format customer.PhoneNumber }
-
-                return! Successful.OK customerDto next ctx
-            | None ->
-                return! RequestErrors.NOT_FOUND "Customer not found" next ctx
-        
-        | Error err ->
-            return! getValidationErrorHandler err next ctx
+            return! Successful.OK customerDto next ctx
+        | None ->
+            return! RequestErrors.NOT_FOUND "Customer not found." next ctx
     }
+    |> withCustomerId id
 
 let postCustomer (compositionRoot: CompositionRoot): HttpHandler =
     fun cmd next (ctx: HttpContext) -> task {
-        let handleCommandTask =
-            Async.StartAsTask(
-                cmd |> compositionRoot.CustomerCommandHandler (Id.newId()),
-                cancellationToken=ctx.RequestAborted)
-
-        match! handleCommandTask with
+        match! handleCommandAsync compositionRoot ctx (Id.newId()) cmd with
         | Ok event ->
-            let responseText =
-                sprintf
-                    "Customer created. Event Id = %A; Customer Id = %A"
-                    event.Id
-                    event.AggregateId
+            let response =
+                {| customerId = event.AggregateId |> Id.value
+                   eventId = event.Id |> Id.value |}
 
-            return! Successful.ACCEPTED responseText next ctx
+            return! Successful.ACCEPTED response next ctx
+
         | Error handlerErr ->
             return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
     }
     |> useRequestDecoder decodeCreateCustomerCmd
+
+let putCustomer (compositionRoot: CompositionRoot) id: HttpHandler =
+    fun cmd next (ctx: HttpContext) -> task {
+        let customerId = Id.create id |> unsafeAssertOk
+
+        match! handleCommandAsync compositionRoot ctx customerId cmd with
+        | Ok event ->
+            let response = {| eventId = event.Id |> Id.value |}
+            return! Successful.ACCEPTED response next ctx
+
+        | Error (DomainError NoUpdateFieldsSupplied) ->
+            return! RequestErrors.BAD_REQUEST "Must specify at least one property to update." next ctx
+
+        | Error handlerErr ->
+            return! ServerErrors.INTERNAL_ERROR $"{handlerErr}" next ctx
+    }
+    |> useRequestDecoder decodeUpdateCustomerCmd

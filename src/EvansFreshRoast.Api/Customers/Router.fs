@@ -11,5 +11,7 @@ let router compositionRoot = choose [
     POST >=> choose [
         routeCix "(/?)" >=> postCustomer compositionRoot
     ]
-    // TODO: PUT customer?
+    PUT >=> choose [
+        routeCif "/%O" (putCustomer compositionRoot)
+    ]
 ]

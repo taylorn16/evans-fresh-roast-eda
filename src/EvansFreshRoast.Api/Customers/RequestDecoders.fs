@@ -13,3 +13,10 @@ let decodeCreateCustomerCmd: Decoder<Command> =
         (Decode.field "name" decodeCustomerName)
         (Decode.field "phoneNumber" decodePhoneNumber)
     |> Decode.map Create
+
+let decodeUpdateCustomerCmd: Decoder<Command> =
+    Decode.map
+        (fun nm ->
+            { Name = nm
+              PhoneNumber = None } |> Update)
+        (Decode.optional "name" decodeCustomerName)

@@ -1,5 +1,4 @@
 - rename and reorganize Utils project
-- flesh out rest of customers api
 - Error handling/messaging/logging in api endpoints
 - Split up roast domain file into several modules
 - refactor/split up roast repository functions into several modules
@@ -9,6 +8,7 @@
 - Ignore invalid coffee reference IDs in order text
 - Refactor incoming sms parser to not look at active roasts
 - Testing strategy??
+- Don't allow duplicate customer records in the domain logic?
 
 - Sketch some basic wireframes of front-end
 

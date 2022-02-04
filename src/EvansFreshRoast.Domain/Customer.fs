@@ -70,7 +70,7 @@ type CustomerCreateFields =
 
 type CustomerUpdateFields =
     { Name: CustomerName option
-      PhoneNumber: UsPhoneNumber option }
+      PhoneNumber: UsPhoneNumber option } // TODO: 
 
 module Customer =
     type Event =
