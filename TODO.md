@@ -1,5 +1,5 @@
 - rename and reorganize Utils project
-- Error handling/messaging/logging in api endpoints
+- Error handling/messaging/logging in roast api endpoints
 - Split up roast domain file into several modules
 - refactor/split up roast repository functions into several modules
 - LOGGING!
@@ -9,15 +9,6 @@
 - Refactor incoming sms parser to not look at active roasts
 - Testing strategy??
 - Don't allow duplicate customer records in the domain logic?
+- unify event id response as DTO model for accepted commands
 
 - Sketch some basic wireframes of front-end
-
-## Frontend notes
-
-Thoth.Json
-Thoth.Fetch or Fable.SimpleHttp?
-Shoelace Web Components
-Paket
-Elmish
-Vite? (Instead of webpack)
-Femto

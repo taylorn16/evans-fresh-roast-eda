@@ -5,6 +5,9 @@
 
 app/
 dev.env
+src/EvansFreshRoast.Client/fable
+src/EvansFreshRoast.Client/dist
+src/EvansFreshRoast.Api/wwwroot/*
 
 # User-specific files
 *.rsuser

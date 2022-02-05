@@ -1,0 +1,19 @@
+{
+    "private": true,
+    "scripts": {
+        "start": "npm run setup && dotnet fable watch ./src --outDir ./fable --sourceMaps --run vite",
+        "build": "npm run setup && dotnet fable ./src --outDir ./fable --sourceMaps --run vite build",
+        "serve": "vite serve",
+        "setup": "mkdir -p fable &&  cp ./src/index.html ./fable/index.html"
+    },
+    "devDependencies": {
+        "remotedev": "^0.2.9",
+        "vite": "^2.7.13"
+    },
+    "name": "evans-fresh-roast-client",
+    "version": "1.0.0",
+    "dependencies": {
+        "react": "^17.0.2",
+        "react-dom": "^17.0.2"
+    }
+}

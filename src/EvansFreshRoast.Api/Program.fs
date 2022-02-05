@@ -1,6 +1,7 @@
 namespace EvansFreshRoast.Api
 
 open System
+open System.IO
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Authentication.JwtBearer
 open Microsoft.AspNetCore.Cors.Infrastructure
@@ -39,6 +40,7 @@ module Program =
             subRoute "/api/v1/_twiliosms" (authenticate >=> Sms.Router.router compositionRoot)
             GET >=> routeCix "/api/v1/authcode(/?)" >=> getLoginCode compositionRoot
             POST >=> routeCix "/api/v1/login(/?)" >=> login compositionRoot
+            routeCix "(/?)" >=> htmlFile "wwwroot/index.html"
             setStatusCode 404 >=> text "Not Found"
         ]
 
@@ -75,6 +77,7 @@ module Program =
                 .UseGiraffeErrorHandler(errorHandler)
                 .UseHttpsRedirection())
             .UseCors(configureCors)
+            .UseStaticFiles()
             .UseAuthentication()
             .UseGiraffe(webApp compositionRoot)
 
@@ -151,10 +154,14 @@ module Program =
         else
             () |> ignore
 
+        let contentRoot = Directory.GetCurrentDirectory()
+        let webRoot = Path.Combine(contentRoot, "wwwroot")
+
         Host
             .CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(fun webHostBuilder ->
                 webHostBuilder
+                    .UseWebRoot(webRoot)
                     .Configure(Action<IApplicationBuilder> (configureApp compositionRoot))
                     .ConfigureServices(Action<IServiceCollection> (configureServices settings compositionRoot))
                     .ConfigureLogging(configureLogging)
