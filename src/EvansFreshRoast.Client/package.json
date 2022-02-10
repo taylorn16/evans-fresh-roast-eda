@@ -8,6 +8,7 @@
     },
     "devDependencies": {
         "remotedev": "^0.2.9",
+        "sass": "^1.49.7",
         "vite": "^2.7.13"
     },
     "name": "evans-fresh-roast-client",

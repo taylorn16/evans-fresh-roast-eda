@@ -1,0 +1,34 @@
+:root {
+    --bs-font-sans-serif: 'Source Sans Pro', sans-serif;
+}
+
+html, body {
+    font-family: var(--bs-font-sans-serif)
+}
+
+#header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    button {
+        cursor: pointer;
+    }
+
+    h1 {
+        margin: 0;
+        padding-left: 1rem;
+    }
+
+    a {
+        padding-right: 1rem;
+    }
+}
+
+#main-nav {
+
+}
