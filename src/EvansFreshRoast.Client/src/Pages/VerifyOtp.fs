@@ -5,17 +5,18 @@ open Elmish
 open Fable.React
 open Fable.React.Props
 open Fable.Core.JsInterop
+open Types
 
 type State =
     { OneTimePassword: string
-      LoginRequest: Deferred<Result<unit, string>> }
+      LoginRequest: Deferred<Result<Session, string>> }
 
 type GlobalMsg =
     | Noop
-    | LoggedIn
+    | LoggedIn of Session
 
 type Msg =
-    | LoginRequest of AsyncOperationEvt<Result<unit, string>>
+    | LoginRequest of AsyncOperationEvt<Result<Session, string>>
     | OtpUpdated of string
 
 let init() =
@@ -23,37 +24,42 @@ let init() =
       LoginRequest = NotStarted },
     Cmd.none
 
-let update (loginToken: string option) msg state =
+let update (otpToken: OtpToken option) msg state =
     match msg with
     | OtpUpdated otp ->
         { state with OneTimePassword = otp }, Cmd.none, Noop
 
     | LoginRequest Started ->
-        match loginToken with
-        | None ->
+        match state.LoginRequest with
+        | InProgress ->
             state, Cmd.none, Noop
 
-        | Some token ->
-            let cmd =
-                async {
-                    match! Api.login token state.OneTimePassword with
-                    | Ok () ->
-                        return Finished <| Ok ()
+        | _ ->
+            match otpToken with
+            | None ->
+                state, Cmd.none, Noop
 
-                    | Error e ->
-                        return Finished <| Error e
-                }
-                |> Cmd.OfAsync.result
-                |> Cmd.map LoginRequest
+            | Some otpToken ->
+                let cmd =
+                    async {
+                        match! Api.login otpToken state.OneTimePassword with
+                        | Ok session ->
+                            return Finished <| Ok session
 
-            let state = { state with LoginRequest = InProgress }
-            
-            state, cmd, Noop
+                        | Error e ->
+                            return Finished <| Error e
+                    }
+                    |> Cmd.OfAsync.result
+                    |> Cmd.map LoginRequest
 
-    | LoginRequest (Finished (Ok ())) ->
-        let state = { state with LoginRequest = Resolved <| Ok () }
+                let state = { state with LoginRequest = InProgress }
+                
+                state, cmd, Noop
 
-        state, Cmd.none, LoggedIn
+    | LoginRequest (Finished (Ok session)) ->
+        let state = { state with LoginRequest = Resolved <| Ok session }
+
+        state, Cmd.none, LoggedIn session
 
     | LoginRequest (Finished (Error e)) ->
         printfn "%s" e
@@ -73,7 +79,7 @@ let view (state: State) (dispatch: Msg -> unit) =
                 input [
                     Type "text"
                     Class "form-control form-control-lg"
-                    Placeholder "e.g., 000000000"
+                    Placeholder "000000000"
                     Value state.OneTimePassword
                     OnInput(fun ev -> dispatch <| OtpUpdated ev.Value)
                 ]

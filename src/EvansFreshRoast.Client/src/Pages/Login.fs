@@ -5,17 +5,18 @@ open Elmish
 open Fable.React
 open Fable.React.Props
 open Fable.Core.JsInterop
+open Types
 
 type State =
     { PhoneNumber: string
-      AuthCodeRequest: Deferred<Result<string, string>> }
+      AuthCodeRequest: Deferred<Result<OtpToken, string>> }
 
 type GlobalMsg =
     | Noop
-    | LoginTokenReceived of string
+    | LoginTokenReceived of OtpToken
 
 type Msg =
-    | AuthCodeRequest of AsyncOperationEvt<Result<string, string>>
+    | AuthCodeRequest of AsyncOperationEvt<Result<OtpToken, string>>
     | PhoneNumberUpdated of string 
 
 let init() =
@@ -26,19 +27,24 @@ let init() =
 let update msg state =
     match msg with
     | AuthCodeRequest Started ->
-        let cmd =
-            async {
-                match! Api.getAuthCode state.PhoneNumber with
-                | Ok token ->
-                    return Finished <| Ok token
+        match state.AuthCodeRequest with
+        | InProgress ->
+            state, Cmd.none, Noop
 
-                | Error e ->
-                    return Finished <| Error e
-            }
-            |> Cmd.OfAsync.result
-            |> Cmd.map AuthCodeRequest
+        | _ ->
+            let cmd =
+                async {
+                    match! Api.getAuthCode state.PhoneNumber with
+                    | Ok token ->
+                        return Finished <| Ok token
 
-        { state with AuthCodeRequest = InProgress }, cmd, Noop
+                    | Error e ->
+                        return Finished <| Error e
+                }
+                |> Cmd.OfAsync.result
+                |> Cmd.map AuthCodeRequest
+
+            { state with AuthCodeRequest = InProgress }, cmd, Noop
 
     | AuthCodeRequest (Finished(Ok token)) ->
         let state = { state with AuthCodeRequest = Resolved <| Ok token }

@@ -8,23 +8,13 @@ open Fable.Core.JsInterop
 open AsyncHelpers
 open Feliz.Router
 open Feliz
+open Routes
+open Types
+open Thoth.Json
 
 importSideEffects "./styles.scss"
 
 let attr name value = HTMLAttr.Custom(name, value)
-
-type Route =
-    | Login
-    | VerifyOtp
-    | NotFound
-    | Roasts
-    static member fromSegments segments =
-        match segments with
-        | [] -> Login
-        | [ "login" ] -> Login
-        | [ "verifyotp" ] -> VerifyOtp
-        | [ "roasts" ] -> Roasts
-        | _ -> NotFound
 
 type Page =
     | NotFound
@@ -33,18 +23,19 @@ type Page =
     | Roasts of Pages.Roasts.State
 
 type State =
-    { Session: string option
-      OtpToken: string option
+    { Session: Session option
+      OtpToken: OtpToken option
       CurrentPage: Page }
 
 type Msg =
+    | Noop
     | RouteChanged of segments: string list
     | LoginMsg of Pages.Login.Msg
     | VerifyOtpMsg of Pages.VerifyOtp.Msg
     | RoastsMsg of Pages.Roasts.Msg
 
-let init () =
-    { Session = None
+let init maybeSession () =
+    { Session = maybeSession
       OtpToken = None
       CurrentPage =
         Login { AuthCodeRequest = NotStarted
@@ -52,28 +43,40 @@ let init () =
     Cmd.none
 
 let update (msg: Msg) (state: State) =
+    let loginPage =
+        let loginState, loginCmd = Pages.Login.init()
+
+        { state with CurrentPage = Login loginState},
+        loginCmd |> Cmd.map LoginMsg
+    
+    let verifyOtpPage =
+        let verifyOtpState, verifyOtpCmd = Pages.VerifyOtp.init()
+
+        { state with CurrentPage = VerifyOtp verifyOtpState },
+        verifyOtpCmd |> Cmd.map VerifyOtpMsg
+
     match msg with
+    | Noop -> state, Cmd.none
+
     | RouteChanged segments ->
-        match Route.fromSegments segments with
-        | Route.Login ->
-            let loginState, loginCmd = Pages.Login.init()
+        match state.Session, Route.fromSegments segments with
+        | _, Route.Login -> loginPage
+        
+        | _, Route.VerifyOtp ->
+            match state.OtpToken with
+            | Some _ -> verifyOtpPage
 
-            { state with CurrentPage = Login loginState},
-            loginCmd |> Cmd.map LoginMsg
+            | None -> loginPage
 
-        | Route.VerifyOtp ->
-            let verifyOtpState, verifyOtpCmd = Pages.VerifyOtp.init()
+        | None, _ -> loginPage
 
-            { state with CurrentPage = VerifyOtp verifyOtpState },
-            verifyOtpCmd |> Cmd.map VerifyOtpMsg
-
-        | Route.Roasts ->
+        | Some _, Route.Roasts ->
             let roastsState, roastsCmd = Pages.Roasts.init()
 
             { state with CurrentPage = Roasts roastsState },
             roastsCmd |> Cmd.map RoastsMsg
 
-        | Route.NotFound ->
+        | Some _, Route.NotFound ->
             { state with CurrentPage = NotFound }, Cmd.none
 
     | LoginMsg loginMsg ->
@@ -87,15 +90,14 @@ let update (msg: Msg) (state: State) =
                     None, Cmd.none
 
                 | Pages.Login.LoginTokenReceived token ->
-                    Some token, Cmd.navigate("verifyotp")
+                    Some token, Route.toNavigateCmd Route.VerifyOtp
 
             { state with
                 CurrentPage = Login newLoginState
                 OtpToken = otpToken },
-            Cmd.batch [
-                loginCmd |> Cmd.map LoginMsg 
-                routeCmd
-            ]
+            Cmd.batch
+                [ loginCmd |> Cmd.map LoginMsg 
+                  routeCmd ]
 
         | _ -> state, Cmd.none
 
@@ -110,16 +112,28 @@ let update (msg: Msg) (state: State) =
                 | Pages.VerifyOtp.Noop ->
                     None, Cmd.none
 
-                | Pages.VerifyOtp.LoggedIn ->
-                    Some "", Cmd.navigate("roasts") // TODO: get session from cookie??
+                | Pages.VerifyOtp.LoggedIn session ->
+                    let saveSessionCmd =
+                        async {
+                            Browser.WebStorage.localStorage.setItem(
+                                "efr.session",
+                                Encode.toString 2 (Session.encode session))
+
+                            return Noop
+                        }
+                        |> Cmd.OfAsync.result
+
+                    Some session,
+                    Cmd.batch
+                        [ Route.toNavigateCmd Route.Roasts
+                          saveSessionCmd ]
 
             { state with
                 CurrentPage = VerifyOtp newVerifyOtpState
                 Session = session },
-            Cmd.batch [
-                verifyOtpCmd |> Cmd.map VerifyOtpMsg
-                routeCmd
-            ]
+            Cmd.batch
+                [ verifyOtpCmd |> Cmd.map VerifyOtpMsg
+                  routeCmd ]
 
         | _ -> state, Cmd.none
 
@@ -212,8 +226,16 @@ let view (state: State) (dispatch: Msg -> unit) =
         ]
     ]
     
+let localStorageSession =
+    Browser.WebStorage.localStorage.getItem "efr.session"
+    |> Option.ofObj
+    |> Option.bind (
+        Decode.fromString Session.decoder
+        >> function
+            | Ok a -> Some a
+            | Error _ -> None)
 
-Program.mkProgram init update view
+Program.mkProgram (init localStorageSession) update view
 |> Program.withReactBatched "app-root"
 |> Program.withConsoleTrace
 |> Program.run

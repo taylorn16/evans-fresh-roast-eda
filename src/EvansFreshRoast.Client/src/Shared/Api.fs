@@ -2,6 +2,7 @@ module Api
 
 open Fable.SimpleHttp
 open Thoth.Json
+open Types
 
 let private baseUri = "/api/v1"
 
@@ -13,18 +14,17 @@ let getAuthCode phoneNumber = async {
 
     match response.statusCode with
     | 200 ->
-        return Ok response.responseText
+        return Ok <| OtpToken.create response.responseText
     
     | sc ->
         return Error $"{sc}: Error getting auth code."
 }
 
-
 let login token oneTimePassword = async {
     let request =
         Encode.object
             [ "loginCode", Encode.string oneTimePassword
-              "loginToken", Encode.string token ]
+              "loginToken", Encode.string (OtpToken.value token) ]
         |> Encode.toString 2
     
     let! response =
@@ -35,7 +35,9 @@ let login token oneTimePassword = async {
 
     match response.statusCode with
     | 200 ->
-        return Ok ()
+        return
+            response.responseText
+            |> Decode.fromString Session.decoder
     
     | sc ->
         return Error $"{sc}: Error logging in."
@@ -54,3 +56,7 @@ let getRoasts() = async {
     | sc ->
         return Error $"{sc}: Error fetching roasts."
 }
+
+// TODO: Dtos + decoders for roasts (summary and detail), coffees, customers
+// TODO: endpoints/abstractions for making similar requests
+// TODO: update API backend to return session in /login response body
