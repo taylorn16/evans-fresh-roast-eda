@@ -61,7 +61,7 @@ module Program =
 
     let configureCors (builder: CorsPolicyBuilder) =
         builder
-            .WithOrigins("http://localhost:5000", "https://localhost:5001")
+            .WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:3000")
             .AllowAnyMethod()
             .AllowAnyHeader()
         |> ignore

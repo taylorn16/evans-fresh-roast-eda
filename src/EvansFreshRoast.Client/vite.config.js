@@ -6,5 +6,13 @@ export default defineConfig({
         outDir: "../../EvansFreshRoast.Api/wwwroot",
         emptyOutDir: true,
         sourcemap: true
+    },
+    server: {
+        proxy: {
+            "/api": {
+                target: "http://localhost:5000",
+                changeOrigin: true
+            }
+        }
     }
 });

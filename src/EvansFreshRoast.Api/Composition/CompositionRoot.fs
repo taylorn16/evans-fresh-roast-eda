@@ -65,6 +65,7 @@ module CompositionRoot =
             let stgs = settings.ConnectionStrings.EventStore
 
             Sql.host stgs.Host
+            |> Sql.port stgs.Port
             |> Sql.username stgs.Username
             |> Sql.password stgs.Password
             |> Sql.database stgs.Database
@@ -75,6 +76,7 @@ module CompositionRoot =
             let stgs = settings.ConnectionStrings.ReadStore
 
             Sql.host stgs.Host
+            |> Sql.port stgs.Port
             |> Sql.username stgs.Username
             |> Sql.password stgs.Password
             |> Sql.database stgs.Database

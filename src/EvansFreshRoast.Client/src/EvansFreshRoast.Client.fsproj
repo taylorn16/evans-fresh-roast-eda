@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Shared/AsyncHelpers.fs" />
+    <Compile Include="Shared/Api.fs" />
+    <Compile Include="Pages/Login.fs" />
+    <Compile Include="Pages/VerifyOtp.fs" />
+    <Compile Include="Pages/Roasts.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
 
@@ -13,6 +18,7 @@
     <PackageReference Include="Fable.Elmish" Version="3.1.0" />
     <PackageReference Include="Fable.Elmish.React" Version="3.0.1" />
     <PackageReference Include="Fable.SimpleHttp" Version="3.1.0" />
+    <PackageReference Include="Feliz.Router" Version="3.8.0" />
     <PackageReference Include="Thoth.Json" Version="7.0.0" />
   </ItemGroup>
 

@@ -4,7 +4,6 @@ open Microsoft.AspNetCore.Http
 open Giraffe
 open EvansFreshRoast.Api.HttpHandlers
 open EvansFreshRoast.Api.Composition
-open EvansFreshRoast.Serialization.Customer
 open EvansFreshRoast.Auth
 open EvansFreshRoast.Sms
 open EvansFreshRoast.Domain
@@ -16,9 +15,18 @@ open Thoth.Json.Net
 open NodaTime
 open System
 
+[<CLIMutable>]
+type GetAuthCodeRequest = { phoneNumber: string }
+
 let getLoginCode (compositionRoot: CompositionRoot): HttpHandler =
-    fun phoneNumber (next: HttpFunc) (ctx: HttpContext) -> task {
+    fun (next: HttpFunc) (ctx: HttpContext) -> task {
         let logger = ctx.GetLogger("getLoginCode")
+
+        let phoneNumber =
+            ctx.BindQueryString<GetAuthCodeRequest>()
+            |> fun req -> req.phoneNumber
+            |> UsPhoneNumber.create
+            |> unsafeAssertOk
 
         let getUser = Repository.getUser compositionRoot.ReadStoreConnectionString
         let createUserLogin = Repository.createUserLogin compositionRoot.ReadStoreConnectionString
@@ -49,7 +57,6 @@ let getLoginCode (compositionRoot: CompositionRoot): HttpHandler =
             logger.LogError(ex, $"Couldn't find user with phone number {UsPhoneNumber.formatE164 phoneNumber}")
             return! ServerErrors.INTERNAL_ERROR "" next ctx            
     }
-    |> useRequestDecoder decodePhoneNumber
 
 [<CLIMutable>]
 type LoginRequest =
@@ -85,7 +92,7 @@ let login (compositionRoot: CompositionRoot): HttpHandler =
                     
                     let setCookies =
                         setHttpHeader "Set-Cookie" $"auth_token={token}; SameSite=Strict; Secure; HttpOnly; Max-Age=900"
-                        >=> setHttpHeader "Set-Cookie" $"logged_in=true; SameSite=Strict; Secure; Max-Age=900"
+                        // >=> setHttpHeader "Set-Cookie" $"logged_in=true; SameSite=Strict; Secure; Max-Age=900"
                     return! (setCookies >=> Successful.ok (text token)) next ctx
 
                 | Error ex ->

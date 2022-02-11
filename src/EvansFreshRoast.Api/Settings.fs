@@ -17,6 +17,7 @@ type RabbitMq =
 [<CLIMutable>]
 type ConnectionStringParams =
     { Host: string
+      Port: int
       Username: string
       Password: string
       Database: string }

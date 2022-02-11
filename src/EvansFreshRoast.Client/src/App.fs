@@ -1,148 +1,139 @@
-﻿module EvansFreshRoast.App
+﻿module App
 
 open Elmish
 open Elmish.React
 open Fable.React
 open Fable.React.Props
-open Fable.React.Standard
-open Fable.React.Helpers
 open Fable.Core.JsInterop
+open AsyncHelpers
+open Feliz.Router
+open Feliz
 
 importSideEffects "./styles.scss"
 
 let attr name value = HTMLAttr.Custom(name, value)
 
-type Deferred<'a> =
-    | NotStarted
-    | InProgress
-    | Resolved of 'a
+type Route =
+    | Login
+    | VerifyOtp
+    | NotFound
+    | Roasts
+    static member fromSegments segments =
+        match segments with
+        | [] -> Login
+        | [ "login" ] -> Login
+        | [ "verifyotp" ] -> VerifyOtp
+        | [ "roasts" ] -> Roasts
+        | _ -> NotFound
 
-module Deferred =
-    let isInProgress =
-        function
-        | InProgress -> true
-        | _ -> false
-
-type AsyncOperationMsg<'a> =
-    | Started
-    | Finished of 'a
+type Page =
+    | NotFound
+    | Login of Pages.Login.State
+    | VerifyOtp of Pages.VerifyOtp.State
+    | Roasts of Pages.Roasts.State
 
 type State =
-    { IsMainNavOpen: bool
-      LoginCodeRequest: Deferred<Result<string, exn>> }
-
-type MainNavMsg =
-    | Opened
-    | Closed
+    { Session: string option
+      OtpToken: string option
+      CurrentPage: Page }
 
 type Msg =
-    | MainNav of MainNavMsg
-    | LoginCodeRequest of AsyncOperationMsg<Result<string, exn>>
+    | RouteChanged of segments: string list
+    | LoginMsg of Pages.Login.Msg
+    | VerifyOtpMsg of Pages.VerifyOtp.Msg
+    | RoastsMsg of Pages.Roasts.Msg
 
 let init () =
-    { IsMainNavOpen = false
-      LoginCodeRequest = NotStarted }, Cmd.none
+    { Session = None
+      OtpToken = None
+      CurrentPage =
+        Login { AuthCodeRequest = NotStarted
+                PhoneNumber = "" } },
+    Cmd.none
 
 let update (msg: Msg) (state: State) =
     match msg with
-    | MainNav Opened ->
-        { state with IsMainNavOpen = true }, Cmd.none
-    
-    | MainNav Closed ->
-        { state with IsMainNavOpen = false }, Cmd.none
+    | RouteChanged segments ->
+        match Route.fromSegments segments with
+        | Route.Login ->
+            let loginState, loginCmd = Pages.Login.init()
 
-    | LoginCodeRequest Started ->
-        let getLoginCode = async {
-            do! Async.Sleep 1000
-            return LoginCodeRequest(Finished(Ok "code"))
-        }
+            { state with CurrentPage = Login loginState},
+            loginCmd |> Cmd.map LoginMsg
 
-        { state with LoginCodeRequest = InProgress }, Cmd.OfAsync.result getLoginCode
+        | Route.VerifyOtp ->
+            let verifyOtpState, verifyOtpCmd = Pages.VerifyOtp.init()
 
-    | LoginCodeRequest (Finished resp) ->
-        { state with LoginCodeRequest = Resolved resp }, Cmd.none
+            { state with CurrentPage = VerifyOtp verifyOtpState },
+            verifyOtpCmd |> Cmd.map VerifyOtpMsg
 
-// let mainNav (state: State) (dispatch: Msg -> unit) =
-//     Bulma.navbar [
-//         navbar.isFixedTop
-//         prop.children [
-//             Bulma.navbarBrand.div [
-//                 Bulma.navbarBrand.a [
-//                     prop.href "/"
-//                     prop.children [
-//                         Html.text "Evan's Fresh Roast"
-//                     ]
-//                 ]
-//                 Bulma.navbarBurger [
-//                     if state.IsMainNavOpen then
-//                         navbarBurger.isActive
-//                     prop.onClick (fun _ ->
-//                         match state.IsMainNavOpen with
-//                         | true -> dispatch <| MainNav Closed
-//                         | false -> dispatch <| MainNav Opened)
-//                     prop.children [
-//                         for _ in 1..3 do
-//                             Html.span [ prop.ariaHidden true ]
-//                     ]
-//                 ]
-//             ]
-//             Bulma.navbarMenu [
-//                 if state.IsMainNavOpen then
-//                     navbarMenu.isActive
-//                 prop.children [
-//                     Bulma.navbarStart.div [
-//                         Bulma.navbarItem.a [
-//                             prop.text "Roasts"
-//                         ]
-//                         Bulma.navbarItem.a [
-//                             prop.text "Coffees"
-//                         ]
-//                         Bulma.navbarItem.a [
-//                             prop.text "Customers"
-//                         ]
-//                     ]
-//                 ]
-//             ]
-//         ]
-//     ]
+        | Route.Roasts ->
+            let roastsState, roastsCmd = Pages.Roasts.init()
 
-// let loginForm (state: State) (dispatch: Msg -> unit) =
-//     Bulma.box [
-//         spacing.mt4
-//         prop.children [
-//             Html.h2 [
-//                 prop.classes [ "is-size-3"; "mb-2" ]
-//                 prop.text "Log In"
-//             ]
-//             Html.form [
-//                 Bulma.field.div [
-//                     Bulma.label "Phone Number"
-//                     Bulma.control.div [
-//                         Bulma.input.tel [ prop.placeholder "111-222-3333" ]
-//                     ]
-//                 ]
-//                 Bulma.field.div [
-//                     Bulma.control.div [
-//                         helpers.isFlex
-//                         helpers.isFlexDirectionRowReverse
-//                         prop.children [
-//                             Bulma.button.button [
-//                                 color.isPrimary
-//                                 prop.onClick(fun ev ->
-//                                     ev.preventDefault()
-//                                     dispatch <| LoginCodeRequest Started)
-//                                 if Deferred.isInProgress state.LoginCodeRequest then
-//                                     button.isLoading
-//                                 prop.text "Continue"
-//                             ]
-//                         ]
-//                     ]
-//                 ]
-//             ]
-//         ]
-//     ]
+            { state with CurrentPage = Roasts roastsState },
+            roastsCmd |> Cmd.map RoastsMsg
 
-let view (state: State) (dispatch: Msg -> unit) =
+        | Route.NotFound ->
+            { state with CurrentPage = NotFound }, Cmd.none
+
+    | LoginMsg loginMsg ->
+        match state.CurrentPage with
+        | Login loginState ->
+            let newLoginState, loginCmd, globalMsg = Pages.Login.update loginMsg loginState
+
+            let otpToken, routeCmd =
+                match globalMsg with
+                | Pages.Login.Noop ->
+                    None, Cmd.none
+
+                | Pages.Login.LoginTokenReceived token ->
+                    Some token, Cmd.navigate("verifyotp")
+
+            { state with
+                CurrentPage = Login newLoginState
+                OtpToken = otpToken },
+            Cmd.batch [
+                loginCmd |> Cmd.map LoginMsg 
+                routeCmd
+            ]
+
+        | _ -> state, Cmd.none
+
+    | VerifyOtpMsg verifyOtpMsg ->
+        match state.CurrentPage with
+        | VerifyOtp verifyOtpState ->
+            let newVerifyOtpState, verifyOtpCmd, globalMsg =
+                Pages.VerifyOtp.update state.OtpToken verifyOtpMsg verifyOtpState
+
+            let session, routeCmd =
+                match globalMsg with
+                | Pages.VerifyOtp.Noop ->
+                    None, Cmd.none
+
+                | Pages.VerifyOtp.LoggedIn ->
+                    Some "", Cmd.navigate("roasts") // TODO: get session from cookie??
+
+            { state with
+                CurrentPage = VerifyOtp newVerifyOtpState
+                Session = session },
+            Cmd.batch [
+                verifyOtpCmd |> Cmd.map VerifyOtpMsg
+                routeCmd
+            ]
+
+        | _ -> state, Cmd.none
+
+    | RoastsMsg roastsMsg ->
+        match state.CurrentPage with
+        | Roasts roastsState ->
+            let newState, cmd = Pages.Roasts.update roastsMsg roastsState
+
+            { state with CurrentPage = Roasts newState },
+            Cmd.map RoastsMsg cmd
+
+        | _ -> state, Cmd.none
+
+let header =
     fragment [] [
         header [ Id "header"; Class "border-bottom bg-white" ] [
             button [
@@ -193,8 +184,36 @@ let view (state: State) (dispatch: Msg -> unit) =
             ]
         ]
     ]
+
+let view (state: State) (dispatch: Msg -> unit) =
+    let currentView =
+        match state.CurrentPage with
+        | Login loginState ->
+            Pages.Login.view loginState (LoginMsg >> dispatch)
+
+        | VerifyOtp verifyOtpState ->
+            Pages.VerifyOtp.view verifyOtpState (VerifyOtpMsg >> dispatch)
+
+        | Roasts roastsState ->
+            Pages.Roasts.view roastsState (RoastsMsg >> dispatch)
+
+        | NotFound ->
+            div [] [ str "Not found" ]
+    
+    fragment [] [
+        header
+        section [ Id "main-content"; Class "mx-3" ] [
+            React.router [
+                router.onUrlChanged (RouteChanged >> dispatch)
+                router.children [
+                    currentView
+                ]
+            ]
+        ]
+    ]
     
 
 Program.mkProgram init update view
 |> Program.withReactBatched "app-root"
+|> Program.withConsoleTrace
 |> Program.run
