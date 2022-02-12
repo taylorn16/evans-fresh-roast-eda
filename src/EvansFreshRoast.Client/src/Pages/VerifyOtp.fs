@@ -75,22 +75,38 @@ let view (state: State) (dispatch: Msg -> unit) =
         h1 [ Class "text-center" ] [ str "Enter Security Code" ]
         div [] [
             div [ Class "mb-3" ] [
-                label [ Class "form-label" ] [ str "Security Code" ]
+                label [ Class "form-label" ] [ str "Code" ]
                 input [
                     Type "text"
-                    Class "form-control form-control-lg"
+                    if Deferred.didFail state.LoginRequest then
+                        Class "form-control form-control-lg is-invalid"
+                    else
+                        Class "form-control form-control-lg"
                     Placeholder "000000000"
                     Value state.OneTimePassword
                     OnInput(fun ev -> dispatch <| OtpUpdated ev.Value)
                 ]
+                if Deferred.didFail state.LoginRequest then
+                    div [ Class "invalid-feedback" ] [
+                        str "Please try again."
+                    ]
             ]
             div [ Class "d-flex justify-content-center" ] [
                 button [
                     Class "btn btn-primary btn-lg"
+                    if Deferred.isInProgress state.LoginRequest then
+                        Class "btn btn-primary btn-lg disabled"
                     OnClick(fun ev ->
                         ev.preventDefault()
                         dispatch <| LoginRequest Started)
-                ] [ str "Log In" ]
+                ] [
+                    if Deferred.isInProgress state.LoginRequest then
+                        span [ Class "spinner-grow spinner-grow-sm" ] []
+                        str "Loading..."
+                    else
+                        str "Log In"
+                        i [ Class "bi-unlock ps-2" ] []
+                ]
             ]
         ]
     ]

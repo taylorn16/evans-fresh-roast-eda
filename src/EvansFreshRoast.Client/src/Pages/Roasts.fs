@@ -41,11 +41,47 @@ let update msg state =
 
         { state with Roasts = InProgress }, cmd
 
-    | GetRoasts (Finished (Ok rs)) ->
-        { state with Roasts = Resolved <| Ok rs }, Cmd.none
+    | GetRoasts (Finished result) ->
+        { state with Roasts = Resolved result }, Cmd.none
 
-    | GetRoasts (Finished (Error e)) ->
-        { state with Roasts = Resolved <| Error e }, Cmd.none
+    | GetCoffees Started ->
+        let cmd =
+            async {
+                match! Api.getCoffees() with
+                | Ok () ->
+                    return Ok []
+
+                | Error e ->
+                    printfn "%s" e
+                    return Error e
+            }
+            |> Cmd.OfAsync.result
+            |> Cmd.map (GetCoffees << Finished)
+
+        { state with Coffees = InProgress }, cmd
+
+    | GetCoffees (Finished result) ->
+        { state with Coffees = Resolved result }, Cmd.none
+
+    | GetCustomers Started ->
+        let cmd =
+            async {
+                match! Api.getCustomers() with
+                | Ok () ->
+                    return Ok []
+
+                | Error e ->
+                    printfn "%s" e
+                    return Error e
+            }
+            |> Cmd.OfAsync.result
+            |> Cmd.map (GetCustomers << Finished)
+
+        { state with Customers = InProgress }, cmd
+
+    | GetCustomers (Finished result) ->
+        { state with Customers = Resolved result }, Cmd.none
+
 
 let view (state: State) (dispatch: Msg -> unit) =
     match state.Roasts, state.Coffees, state.Customers with

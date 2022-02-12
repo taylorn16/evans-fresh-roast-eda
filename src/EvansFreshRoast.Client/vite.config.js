@@ -10,8 +10,12 @@ export default defineConfig({
     server: {
         proxy: {
             "/api": {
-                target: "http://localhost:5000",
-                changeOrigin: true
+                target: "https://localhost:5001",
+                changeOrigin: true,
+                cookieDomainRewrite: {
+                    "localhost:5001": "localhost:3000"
+                },
+                secure: false
             }
         }
     }

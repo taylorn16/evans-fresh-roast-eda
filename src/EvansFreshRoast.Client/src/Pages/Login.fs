@@ -9,7 +9,7 @@ open Types
 
 type State =
     { PhoneNumber: string
-      AuthCodeRequest: Deferred<Result<OtpToken, string>> }
+      AuthCode: Deferred<Result<OtpToken, string>> }
 
 type GlobalMsg =
     | Noop
@@ -21,13 +21,13 @@ type Msg =
 
 let init() =
     { PhoneNumber = ""
-      AuthCodeRequest = NotStarted },
+      AuthCode = NotStarted },
     Cmd.none
 
 let update msg state =
     match msg with
     | AuthCodeRequest Started ->
-        match state.AuthCodeRequest with
+        match state.AuthCode with
         | InProgress ->
             state, Cmd.none, Noop
 
@@ -44,16 +44,16 @@ let update msg state =
                 |> Cmd.OfAsync.result
                 |> Cmd.map AuthCodeRequest
 
-            { state with AuthCodeRequest = InProgress }, cmd, Noop
+            { state with AuthCode = InProgress }, cmd, Noop
 
     | AuthCodeRequest (Finished(Ok token)) ->
-        let state = { state with AuthCodeRequest = Resolved <| Ok token }
+        let state = { state with AuthCode = Resolved <| Ok token }
 
         state, Cmd.none, LoginTokenReceived token
 
     | AuthCodeRequest (Finished(Error e)) ->
         printfn "%s" e
-        let state = { state with AuthCodeRequest = Resolved <| Error e }
+        let state = { state with AuthCode = Resolved <| Error e }
 
         state, Cmd.none, Noop
 
@@ -73,21 +73,34 @@ let view (state: State) (dispatch: Msg -> unit) =
                 label [ Class "form-label" ] [ str "Phone Number" ]
                 input [
                     Type "tel"
-                    Class "form-control form-control-lg"
-                    Placeholder "e.g., 111-222-3333"
+                    if Deferred.didFail state.AuthCode then
+                        Class "form-control form-control-lg is-invalid"
+                    else
+                        Class "form-control form-control-lg"
+                    Placeholder "111-222-3333"
                     Value state.PhoneNumber
                     OnInput(fun ev -> dispatch <| PhoneNumberUpdated ev.Value)
                 ]
+                if Deferred.didFail state.AuthCode then
+                    div [ Class "invalid-feedback" ] [
+                        str "Please try again."
+                    ]
             ]
             div [ Class "d-flex justify-content-center" ] [
                 button [
                     Class "btn btn-primary btn-lg"
+                    if Deferred.isInProgress state.AuthCode then
+                        Class "btn btn-primary btn-lg disabled"
                     OnClick(fun ev ->
                         ev.preventDefault()
                         dispatch <| AuthCodeRequest Started)
                 ] [
-                    str "Continue"
-                    i [ Class "bi-arrow-right-square ps-2" ] []
+                    if Deferred.isInProgress state.AuthCode then
+                        span [ Class "spinner-grow spinner-grow-sm" ] []
+                        str "Loading..."
+                    else
+                        str "Continue"
+                        i [ Class "bi-arrow-right-square ps-2" ] []
                 ]
             ]
         ]

@@ -51,7 +51,35 @@ let getRoasts() = async {
 
     match response.statusCode with
     | 200 ->
-        return Ok ()
+        return Ok () // TODO:
+    
+    | sc ->
+        return Error $"{sc}: Error fetching roasts."
+}
+
+let getCoffees() = async {
+    let! response =
+        Http.request $"{baseUri}/coffees"
+        |> Http.method GET
+        |> Http.send
+
+    match response.statusCode with
+    | 200 ->
+        return Ok () // TODO:
+    
+    | sc ->
+        return Error $"{sc}: Error fetching roasts."
+}
+
+let getCustomers() = async {
+    let! response =
+        Http.request $"{baseUri}/customers"
+        |> Http.method GET
+        |> Http.send
+
+    match response.statusCode with
+    | 200 ->
+        return Ok () // TODO:
     
     | sc ->
         return Error $"{sc}: Error fetching roasts."
@@ -59,4 +87,3 @@ let getRoasts() = async {
 
 // TODO: Dtos + decoders for roasts (summary and detail), coffees, customers
 // TODO: endpoints/abstractions for making similar requests
-// TODO: update API backend to return session in /login response body

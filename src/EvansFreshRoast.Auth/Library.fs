@@ -166,29 +166,39 @@ module Repository =
             return Error <| exn("Error creating user login.", ex)
     }
 
-    let validateUserLogin connectionString (userLoginId: Id<UserLogin>) = async {
+    let validateUserLogin connectionString (userLoginId: Id<UserLogin>): Async<Result<Id<User> * UserName, exn>> = async {
         try
             return! ConnectionString.value connectionString
             |> Sql.connect
             |> Sql.query
                 """
-                UPDATE user_logins
-                SET is_validated = 1::BIT
-                WHERE user_login_id = @userLoginId
-                RETURNING user_fk
+                WITH user_fks AS (
+                    UPDATE user_logins
+                    SET is_validated = 1::BIT
+                    WHERE user_login_id = @userLoginId
+                    RETURNING user_fk
+                )
+                SELECT user_id, user_name
+                FROM users
+                WHERE user_id = ANY(SELECT user_fk FROM user_fks)
+                LIMIT 1
                 """
             |> Sql.parameters
                 [ "userLoginId", userLoginId |> Id.value |> Sql.uuid ]
             |> Sql.executeAsync (fun r ->
-                r.uuid "user_fk"
-                |> Id.create
-                |> unsafeAssertOk
-                :> Id<User>)
+                let userId = 
+                    r.uuid "user_id"
+                    |> Id.create
+                    |> unsafeAssertOk
+                    
+                let userName =
+                    r.string "user_name"
+                    |> UserName.create
+                    |> unsafeAssertOk
+                    
+                userId, userName)
             |> Async.AwaitTask
-            |> Async.map (
-                List.head
-                >> Ok
-            )
+            |> Async.map (List.head >> Ok)
         with
         | ex ->
             return Error <| exn("Error marking user login validated.", ex)

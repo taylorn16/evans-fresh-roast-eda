@@ -1,13 +1,11 @@
 ﻿module App
 
 open Elmish
+open Elmish.Navigation
 open Elmish.React
 open Fable.React
 open Fable.React.Props
 open Fable.Core.JsInterop
-open AsyncHelpers
-open Feliz.Router
-open Feliz
 open Routes
 open Types
 open Thoth.Json
@@ -29,55 +27,54 @@ type State =
 
 type Msg =
     | Noop
-    | RouteChanged of segments: string list
     | LoginMsg of Pages.Login.Msg
     | VerifyOtpMsg of Pages.VerifyOtp.Msg
     | RoastsMsg of Pages.Roasts.Msg
 
-let init maybeSession () =
-    { Session = maybeSession
-      OtpToken = None
-      CurrentPage =
-        Login { AuthCodeRequest = NotStarted
-                PhoneNumber = "" } },
-    Cmd.none
+let setCurrentPage maybeRoute state =
+    match state.Session, maybeRoute with
+        | None, None ->
+            state, Route.navigateTo Route.Login
 
-let update (msg: Msg) (state: State) =
-    let loginPage =
-        let loginState, loginCmd = Pages.Login.init()
+        | _, Some Route.Login ->
+            let loginState, loginCmd = Pages.Login.init()
 
-        { state with CurrentPage = Login loginState},
-        loginCmd |> Cmd.map LoginMsg
-    
-    let verifyOtpPage =
-        let verifyOtpState, verifyOtpCmd = Pages.VerifyOtp.init()
-
-        { state with CurrentPage = VerifyOtp verifyOtpState },
-        verifyOtpCmd |> Cmd.map VerifyOtpMsg
-
-    match msg with
-    | Noop -> state, Cmd.none
-
-    | RouteChanged segments ->
-        match state.Session, Route.fromSegments segments with
-        | _, Route.Login -> loginPage
+            { state with CurrentPage = Login loginState},
+            loginCmd |> Cmd.map LoginMsg
         
-        | _, Route.VerifyOtp ->
+        | _, Some Route.VerifyOtp ->
             match state.OtpToken with
-            | Some _ -> verifyOtpPage
+            | Some _ ->
+                let verifyOtpState, verifyOtpCmd = Pages.VerifyOtp.init()
 
-            | None -> loginPage
+                { state with CurrentPage = VerifyOtp verifyOtpState },
+                verifyOtpCmd |> Cmd.map VerifyOtpMsg
 
-        | None, _ -> loginPage
+            | None ->
+                state, Route.navigateTo Route.Login
 
-        | Some _, Route.Roasts ->
+        | None, _ ->
+            state, Route.navigateTo Route.Login
+
+        | Some _, Some Route.Roasts ->
             let roastsState, roastsCmd = Pages.Roasts.init()
 
             { state with CurrentPage = Roasts roastsState },
             roastsCmd |> Cmd.map RoastsMsg
 
-        | Some _, Route.NotFound ->
+        | _ ->
             { state with CurrentPage = NotFound }, Cmd.none
+
+let init maybeSession maybeRoute =
+    { Session = maybeSession
+      OtpToken = None
+      CurrentPage = NotFound }
+    |> setCurrentPage maybeRoute
+
+let update (msg: Msg) (state: State) =
+    match msg with
+    | Noop ->
+        state, Cmd.none
 
     | LoginMsg loginMsg ->
         match state.CurrentPage with
@@ -90,7 +87,7 @@ let update (msg: Msg) (state: State) =
                     None, Cmd.none
 
                 | Pages.Login.LoginTokenReceived token ->
-                    Some token, Route.toNavigateCmd Route.VerifyOtp
+                    Some token, Route.navigateTo Route.VerifyOtp
 
             { state with
                 CurrentPage = Login newLoginState
@@ -125,12 +122,17 @@ let update (msg: Msg) (state: State) =
 
                     Some session,
                     Cmd.batch
-                        [ Route.toNavigateCmd Route.Roasts
+                        [ Route.navigateTo Route.Roasts
                           saveSessionCmd ]
 
             { state with
                 CurrentPage = VerifyOtp newVerifyOtpState
-                Session = session },
+                Session = session
+                OtpToken =
+                    if Option.isSome session then
+                        None
+                    else
+                        state.OtpToken },
             Cmd.batch
                 [ verifyOtpCmd |> Cmd.map VerifyOtpMsg
                   routeCmd ]
@@ -217,12 +219,7 @@ let view (state: State) (dispatch: Msg -> unit) =
     fragment [] [
         header
         section [ Id "main-content"; Class "mx-3" ] [
-            React.router [
-                router.onUrlChanged (RouteChanged >> dispatch)
-                router.children [
-                    currentView
-                ]
-            ]
+            currentView
         ]
     ]
     
@@ -236,6 +233,7 @@ let localStorageSession =
             | Error _ -> None)
 
 Program.mkProgram (init localStorageSession) update view
-|> Program.withReactBatched "app-root"
+|> Program.toNavigable (UrlParser.parseHash Route.parse) setCurrentPage 
+|> Program.withReactSynchronous "app-root"
 |> Program.withConsoleTrace
 |> Program.run

@@ -119,7 +119,7 @@ module Program =
                 events.OnMessageReceived <- fun ctx ->
                     task {
                         let token =
-                            ctx.Request.Cookies["auth_token"]
+                            ctx.Request.Cookies["efr.auth.token"]
                             |> Option.ofObj
                             |> Option.defaultValue (
                                 ctx.Request.Headers["Authentication"].ToArray()

@@ -12,6 +12,11 @@ module Deferred =
         | InProgress -> true
         | _ -> false
 
+    let didFail =
+        function
+        | Resolved (Error _) -> true
+        | _ -> false
+
 type AsyncOperationEvt<'a> =
     | Started
     | Finished of 'a
