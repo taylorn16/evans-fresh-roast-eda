@@ -1,4 +1,4 @@
-module EvansFreshRoast.Api.Auth
+module EvansFreshRoast.Api.Auth.HttpHandlers
 
 open Microsoft.AspNetCore.Http
 open Giraffe
@@ -9,14 +9,11 @@ open EvansFreshRoast.Sms
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Utils
 open EvansFreshRoast.Framework
-open EvansFreshRoast.Serialization.Common
 open Microsoft.Extensions.Logging
-open Thoth.Json.Net
 open NodaTime
 open System
-
-[<CLIMutable>]
-type GetAuthCodeRequest = { phoneNumber: string }
+open EvansFreshRoast.Dto
+open EvansFreshRoast.Api.Auth.RequestDecoders
 
 let getLoginCode (compositionRoot: CompositionRoot): HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) -> task {
@@ -24,7 +21,7 @@ let getLoginCode (compositionRoot: CompositionRoot): HttpHandler =
 
         let phoneNumber =
             ctx.BindQueryString<GetAuthCodeRequest>()
-            |> fun req -> req.phoneNumber
+            |> fun req -> req.PhoneNumber
             |> UsPhoneNumber.create
             |> unsafeAssertOk
 
@@ -58,19 +55,6 @@ let getLoginCode (compositionRoot: CompositionRoot): HttpHandler =
             return! ServerErrors.INTERNAL_ERROR "" next ctx            
     }
 
-[<CLIMutable>]
-type LoginRequest =
-    { LoginCode: string
-      LoginToken: Id<UserLogin> }
-
-let decodeLoginRequest: Decoder<LoginRequest> = 
-    Decode.map2
-        (fun code id ->
-            { LoginCode = code
-              LoginToken = id })
-        (Decode.field "loginCode" Decode.string)
-        (Decode.field "loginToken" decodeId)
-
 let login (compositionRoot: CompositionRoot): HttpHandler =
     fun request (next: HttpFunc) (ctx: HttpContext) -> task {
         let logger = ctx.GetLogger("login")
@@ -78,8 +62,9 @@ let login (compositionRoot: CompositionRoot): HttpHandler =
         let getUserLogin = Repository.getUserLogin compositionRoot.ReadStoreConnectionString
         let validateUserLogin = Repository.validateUserLogin compositionRoot.ReadStoreConnectionString
         let now = OffsetDateTime.FromDateTimeOffset(DateTimeOffset.Now)
+        let id: Id<UserLogin> = request.LoginToken |> Id.create |> unsafeAssertOk
 
-        match! getUserLogin request.LoginToken with
+        match! getUserLogin id with
         | Ok userLogin ->
             let codesMatch = LoginCode.value userLogin.Code = request.LoginCode
             let loginNotExpired = userLogin.ExpiresAt.ToInstant() > now.ToInstant()

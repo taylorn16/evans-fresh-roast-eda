@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Giraffe" Version="6.0.0-alpha-2" />
+    <PackageReference Include="Microsoft.AspNet.SignalR" Version="2.4.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.1" />
     <PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.0.0" />
@@ -20,7 +21,6 @@
     <Compile Include="Composition/Leaves/CoffeeWorkflowDependencies.fs" />
     <Compile Include="Composition/Leaves/RoastWorkflowDependencies.fs" />
     <Compile Include="Composition/CompositionRoot.fs" />
-    <Compile Include="Models.fs" />
     <Compile Include="HttpHandlers.fs" />
     <Compile Include="Coffees/RequestDecoders.fs" />
     <Compile Include="Coffees/HttpHandlers.fs" />
@@ -33,7 +33,10 @@
     <Compile Include="Roasts/Router.fs" />
     <Compile Include="Sms/HttpHandlers.fs" />
     <Compile Include="Sms/Router.fs" />
-    <Compile Include="Auth.fs" />
+    <Compile Include="Auth/RequestDecoders.fs" />
+    <Compile Include="Auth/HttpHandlers.fs" />
+    <Compile Include="Auth/Router.fs" />
+    <Compile Include="TestHub.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
     <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />
@@ -55,5 +58,6 @@
     <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Sms\EvansFreshRoast.Sms.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Auth\EvansFreshRoast.Auth.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Dto\EvansFreshRoast.Dto.fsproj" />
   </ItemGroup>
 </Project>

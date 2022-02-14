@@ -1,7 +1,7 @@
 module EvansFreshRoast.Api.Coffees.HttpHandlers
 
 open EvansFreshRoast.Api.HttpHandlers
-open EvansFreshRoast.Api.Models
+open EvansFreshRoast.Dto
 open EvansFreshRoast.Api.Coffees.RequestDecoders
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Domain

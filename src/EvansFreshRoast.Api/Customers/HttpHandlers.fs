@@ -2,10 +2,9 @@ module EvansFreshRoast.Api.Customers.HttpHandlers
 
 open Giraffe
 open Microsoft.AspNetCore.Http
-open Microsoft.Extensions.Logging
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Framework
-open EvansFreshRoast.Api.Models
+open EvansFreshRoast.Dto
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Customer
 open EvansFreshRoast.Utils

@@ -62,5 +62,5 @@ CREATE TABLE user_logins(
   , CONSTRAINT fk_user FOREIGN KEY(user_fk) REFERENCES users(user_id)
 );
 
-INSERT INTO users(user_name, user_phone_number)
-VALUES('', '');
+-- INSERT INTO users(user_name, user_phone_number)
+-- VALUES('', '');

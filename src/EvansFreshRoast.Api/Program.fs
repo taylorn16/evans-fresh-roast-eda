@@ -18,7 +18,6 @@ open EvansFreshRoast.Api.EventConsumers.Sms
 open Microsoft.Extensions.Configuration
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Api
-open EvansFreshRoast.Api.Auth
 open RabbitMQ.Client
 open Microsoft.IdentityModel.Tokens
 open System.Text
@@ -27,7 +26,6 @@ module Program =
     // ---------------------------------
     // Web app
     // ---------------------------------
-
     let authenticate: HttpHandler =
         requiresAuthentication
             (challenge JwtBearerDefaults.AuthenticationScheme >=> text "Please authenticate.")
@@ -37,9 +35,8 @@ module Program =
             subRoute "/api/v1/coffees" (authenticate >=> Coffees.Router.router compositionRoot)
             subRoute "/api/v1/customers" (authenticate >=> Customers.Router.router compositionRoot)
             subRoute "/api/v1/roasts" (authenticate >=> Roasts.Router.router compositionRoot)
-            subRoute "/api/v1/_twiliosms" (authenticate >=> Sms.Router.router compositionRoot)
-            GET >=> routeCix "/api/v1/authcode(/?)" >=> getLoginCode compositionRoot
-            POST >=> routeCix "/api/v1/login(/?)" >=> login compositionRoot
+            subRoute "/api/v1/sms" (authenticate >=> Sms.Router.router compositionRoot)
+            subRoute "/api/v1/auth" (Auth.Router.router compositionRoot)
             routeCix "(/?)" >=> htmlFile "wwwroot/index.html"
             setStatusCode 404 >=> text "Not Found"
         ]
@@ -47,7 +44,6 @@ module Program =
     // ---------------------------------
     // Error handler
     // ---------------------------------
-
     let errorHandler (ex: Exception) (logger: ILogger) =
         logger.LogError(ex, "An unhandled exception has occurred while executing the request.")
 
@@ -58,7 +54,6 @@ module Program =
     // ---------------------------------
     // Config and Main
     // ---------------------------------
-
     let configureCors (builder: CorsPolicyBuilder) =
         builder
             .WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:3000")
@@ -79,6 +74,9 @@ module Program =
             .UseCors(configureCors)
             .UseStaticFiles()
             .UseAuthentication()
+            .UseRouting()
+            .UseEndpoints(fun endpoints ->
+                endpoints.MapHub<TestHub>("/ws") |> ignore)
             .UseGiraffe(webApp compositionRoot)
 
     let configureServices (settings: Settings) (compositionRoot: CompositionRoot) (services: IServiceCollection) =
@@ -92,6 +90,7 @@ module Program =
         services.AddHostedService<RoastSmsConsumer>() |> ignore
         services.AddCors() |> ignore
         services.AddGiraffe() |> ignore
+        services.AddSignalR() |> ignore
 
         let serializerOptions =
             let opts =

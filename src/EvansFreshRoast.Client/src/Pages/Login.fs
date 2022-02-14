@@ -86,7 +86,7 @@ let view (state: State) (dispatch: Msg -> unit) =
                         str "Please try again."
                     ]
             ]
-            div [ Class "d-flex justify-content-center" ] [
+            div [ Class "d-flex justify-content-end" ] [
                 button [
                     Class "btn btn-primary btn-lg"
                     if Deferred.isInProgress state.AuthCode then

@@ -2,7 +2,7 @@ module EvansFreshRoast.Api.Roasts.HttpHandlers
 
 open EvansFreshRoast.Api.HttpHandlers
 open EvansFreshRoast.Api.Roasts.RequestDecoders
-open EvansFreshRoast.Api.Models
+open EvansFreshRoast.Dto
 open EvansFreshRoast.Api.Composition
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain

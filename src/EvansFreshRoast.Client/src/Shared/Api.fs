@@ -85,5 +85,30 @@ let getCustomers() = async {
         return Error $"{sc}: Error fetching roasts."
 }
 
+let makePostRequest uri json decoder = async {
+    let! response =
+        Http.request uri
+        |> Http.method POST
+        |> Http.header (Headers.contentType "application/json")
+        |> Http.header (Headers.accept "application/json")
+        |> Http.content (BodyContent.Text (Encode.toString 2 json))
+        |> Http.send
+
+    match response.statusCode with
+    | 200 ->
+        return response.responseText
+        |> Decode.fromString decoder
+
+    | sc ->
+        return Error $"{sc}: Error saving coffee."
+}
+
+
+let saveCoffee coffee =
+    makePostRequest
+        $"{baseUri}/coffees"
+        (Coffee.encode coffee)
+        AsyncApiEventResponse.decoder
+
 // TODO: Dtos + decoders for roasts (summary and detail), coffees, customers
 // TODO: endpoints/abstractions for making similar requests

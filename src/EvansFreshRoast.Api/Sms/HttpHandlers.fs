@@ -26,7 +26,7 @@ let sendTwilioResponse msg: HttpHandler =
     }
 
 let verifyTwilioId (compositionRoot: CompositionRoot): HttpHandler =
-    // TODO: authenticate the request with the auth token
+    // TODO: authenticate the request with the auth token??
     fun (next: HttpFunc) (ctx: HttpContext) -> task {
         let! request = ctx.BindModelAsync<SmsRequest>()
 
