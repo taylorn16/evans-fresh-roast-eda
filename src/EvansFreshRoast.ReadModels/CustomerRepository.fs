@@ -47,9 +47,7 @@ module CustomerRepository =
         | Updated fields ->
             let jsonbSet =
                 [ if fields.Name.IsSome then
-                    "name", Encode.string <| CustomerName.value fields.Name.Value
-                  if fields.PhoneNumber.IsSome then
-                    "phoneNumber", Encode.string <| UsPhoneNumber.value fields.PhoneNumber.Value ]
+                    "name", Encode.string <| CustomerName.value fields.Name.Value ]
                 |> Helpers.generateRecursiveJsonbSet "customer_data"
             
             async {

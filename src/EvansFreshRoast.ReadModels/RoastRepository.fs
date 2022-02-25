@@ -5,15 +5,14 @@ open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Roast
 open EvansFreshRoast.Utils
 open Npgsql.FSharp
-open NodaTime
 open System
 open System.Globalization
 
 type RoastSummaryView =
     { Id: Id<Roast>
       Name: RoastName
-      RoastDate: LocalDate
-      OrderByDate: LocalDate
+      RoastDate: DateTime
+      OrderByDate: DateTime
       CustomersCount: NonNegativeInt
       Coffees: list<Id<Coffee> * CoffeeName>
       RoastStatus: RoastStatus
@@ -22,8 +21,8 @@ type RoastSummaryView =
 type RoastDetailedView =
     { Id: Id<Roast>
       Name: RoastName
-      RoastDate: LocalDate
-      OrderByDate: LocalDate
+      RoastDate: DateTime
+      OrderByDate: DateTime
       Customers: Id<Customer> list
       Coffees: Id<Coffee> list
       Orders: Order list
@@ -97,7 +96,7 @@ module RoastRepository =
 
             let insertOrderParams =
                 [ [ "customerId", order.CustomerId |> Id.value |> Sql.uuid
-                    "placedTime", order.Timestamp.ToDateTimeOffset() |> Sql.timestamptz
+                    "placedTime", order.Timestamp |> Sql.timestamptz
                     "roastId", roastUuid ] ]
 
             let insertOrderLineItemSql =
@@ -350,8 +349,8 @@ module RoastRepository =
             }
 
         | RoastDatesChanged (roastDate, orderByDate) ->
-            let formatDate (dt: LocalDate) =
-                dt.ToString("R", CultureInfo.InvariantCulture)
+            let formatDate (dt: DateTime) =
+                dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
 
             async {
                 try
@@ -485,8 +484,8 @@ module RoastRepository =
         let mapDbRoastRow dbRoastRow orders =
             { Id = dbRoastRow.RoastId |> Id.create |> unsafeAssertOk
               Name = dbRoastRow.RoastName |> RoastName.create |> unsafeAssertOk
-              RoastDate = LocalDate.FromDateTime(dbRoastRow.RoastDate)
-              OrderByDate = LocalDate.FromDateTime(dbRoastRow.OrderByDate)
+              RoastDate = dbRoastRow.RoastDate
+              OrderByDate = dbRoastRow.OrderByDate
               Customers =
                 dbRoastRow.CustomerIds
                 |> Array.map (Id.create >> unsafeAssertOk)
@@ -518,7 +517,7 @@ module RoastRepository =
                     |> List.map (fun (_, orderGroup) ->
                         let orderDetails =
                             { CustomerId = orderGroup.Head.CustomerId.Value |> Id.create |> unsafeAssertOk
-                              Timestamp = OffsetDateTime.FromDateTimeOffset(orderGroup.Head.PlacedTime.Value)
+                              Timestamp = orderGroup.Head.PlacedTime.Value
                               LineItems =
                                 orderGroup
                                 |> List.map (fun x ->
@@ -578,8 +577,6 @@ module RoastRepository =
         }
 
     let getAllRoasts connectionString (getAllCoffees: unit -> Async<(Id<Coffee> * Coffee) list>) =
-        let toLocalDate (dt: DateTime) = LocalDate.FromDateTime(dt)
-        
         async {
             let! allCoffees = getAllCoffees()
 
@@ -605,8 +602,8 @@ module RoastRepository =
 
                 { Id = row.uuid "roast_id" |> Id.create |> unsafeAssertOk
                   Name = row.string "roast_name" |> RoastName.create |> unsafeAssertOk
-                  RoastDate = row.dateTime "roast_date" |> toLocalDate
-                  OrderByDate = row.dateTime "order_by_date" |> toLocalDate
+                  RoastDate = row.dateTime "roast_date"
+                  OrderByDate = row.dateTime "order_by_date"
                   CustomersCount = row.int "customers_count" |> NonNegativeInt.create |> unsafeAssertOk
                   RoastStatus = row.string "roast_status" |> parseRoastStatus
                   OrdersCount = row.int "orders_count" |> NonNegativeInt.create |> unsafeAssertOk

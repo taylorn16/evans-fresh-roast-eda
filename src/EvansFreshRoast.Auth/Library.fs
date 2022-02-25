@@ -64,12 +64,12 @@ module Jwt =
             expires = expirationDt,
             issuer = conf.Issuer,
             audience = conf.Audience,
-            claims = [ new Claim(ClaimTypes.NameIdentifier, userId.ToString()) ])
+            claims = [ Claim(ClaimTypes.NameIdentifier, userId |> Id.value |> string) ])
 
         JwtSecurityTokenHandler().WriteToken(token)
 
 module Repository =
-    let getUser connectionString phoneNumber = async {
+    let getUserByPhoneNumber connectionString phoneNumber = async {
         try
             return! ConnectionString.value connectionString
             |> Sql.connect
@@ -99,6 +99,36 @@ module Repository =
             return Error <| exn("Error querying user.", ex)
     }
 
+    let getUserById connectionString (userId: Id<User>) = async {
+        try
+            return! ConnectionString.value connectionString
+            |> Sql.connect
+            |> Sql.query
+                """
+                SELECT
+                    user_id
+                  , user_name
+                  , user_phone_number
+                FROM users
+                WHERE user_id = @userId
+                LIMIT 1
+                """
+            |> Sql.parameters
+                [ "userId", userId |> Id.value |> Sql.uuid ]
+            |> Sql.executeAsync (fun r ->
+                { Id = userId
+                  Name = r.string "user_name" |> UserName.create |> unsafeAssertOk
+                  PhoneNumber = r.string "user_phone_number" |> UsPhoneNumber.create |> unsafeAssertOk })
+            |> Async.AwaitTask
+            |> Async.map (
+                List.tryHead
+                >> Result.ofOption (exn("Unable to find user."))
+            )
+        with
+        | ex ->
+            return Error <| exn("Error querying user.", ex)
+    }
+    
     let getUserLogin connectionString (id: Id<UserLogin>) = async {
         try
             return! ConnectionString.value connectionString

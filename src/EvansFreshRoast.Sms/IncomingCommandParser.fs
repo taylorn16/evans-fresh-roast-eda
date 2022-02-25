@@ -1,10 +1,10 @@
 module EvansFreshRoast.Sms.IncomingCommandParser
 
+open System
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Utils
 open System.Text.RegularExpressions
-open NodaTime
 
 type Command =
     | RoastCommand of Id<Roast> * Roast.Command
@@ -97,7 +97,7 @@ let parseLines (orderMsg: string) =
 
 let parse
     (getAllRoasts: unit -> Async<list<Id<Roast> * RoastStatus>>)
-    (getNow: unit -> OffsetDateTime)
+    (getNow: unit -> DateTimeOffset)
     customerId
     smsMsg
     = async {

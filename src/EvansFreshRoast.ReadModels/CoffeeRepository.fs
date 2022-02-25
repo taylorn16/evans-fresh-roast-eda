@@ -21,7 +21,7 @@ module CoffeeRepository =
                       "description", Encode.string <| CoffeeDescription.value coffee.Description
                       "pricePerBag", Encode.decimal <| UsdPrice.value coffee.PricePerBag
                       "weightPerBag", Encode.decimal <| OzWeight.value coffee.WeightPerBag
-                      "status", Encode.string "Inactive" ]
+                      "status", Encode.string "Active" ]
                 |> Encode.toString 2
             
             let sql =

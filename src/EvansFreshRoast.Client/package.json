@@ -1,10 +1,10 @@
 {
     "private": true,
     "scripts": {
-        "start": "npm run setup && dotnet fable watch ./src --outDir ./fable --sourceMaps --run vite",
-        "build": "npm run setup && dotnet fable ./src --outDir ./fable --sourceMaps --run vite build",
+        "start": "npm run setup && dotnet fable watch . --outDir ./fable --sourceMaps --run vite",
+        "build": "npm run setup && dotnet fable . --outDir ./fable --sourceMaps --run vite build",
         "serve": "vite serve",
-        "setup": "mkdir -p fable &&  cp ./src/index.html ./fable/index.html"
+        "setup": "mkdir -p fable &&  cp src/index.html fable/index.html"
     },
     "devDependencies": {
         "@microsoft/signalr": "^6.0.2",

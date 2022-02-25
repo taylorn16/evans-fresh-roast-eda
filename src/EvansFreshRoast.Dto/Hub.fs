@@ -1,7 +1,9 @@
 namespace EvansFreshRoast.Dto
 
-type CoffeeEvent =
-    | 
+open EvansFreshRoast.Domain
+open EvansFreshRoast.Framework
 
-type HubEvent =
-    | 
+type Event =
+    | RoastEvent of DomainEvent<Roast, Roast.Event>
+    | CustomerEvent of DomainEvent<Customer, Customer.Event>
+    | CoffeeEvent of DomainEvent<Coffee, Coffee.Event>

@@ -1,12 +1,12 @@
 namespace EvansFreshRoast.Framework
 
-open NodaTime
 open EvansFreshRoast.Utils
+open System
 
 type DomainEvent<'State, 'Event> =
     { Id: Id<DomainEvent<'State, 'Event>>
       AggregateId: Id<'State>
-      Timestamp: OffsetDateTime
+      Timestamp: DateTimeOffset
       Version: AggregateVersion
       Body: 'Event }
 
@@ -45,7 +45,7 @@ module Aggregate =
                             let domainEvent =
                                 { Id = Id.newId()
                                   AggregateId = id
-                                  Timestamp = OffsetDateTime.FromDateTimeOffset(System.DateTimeOffset.Now)
+                                  Timestamp = DateTimeOffset.Now
                                   Version = expectedVersion
                                   Body = evt }
                             

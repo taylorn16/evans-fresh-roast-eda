@@ -1,10 +1,10 @@
 namespace EvansFreshRoast.Domain
 
 open EvansFreshRoast.Framework
-open NodaTime
 open System.Collections.Generic
 open EvansFreshRoast.Utils
 open System.Text.RegularExpressions
+open System
 
 type UsdInvoiceAmount = private UsdInvoiceAmount of decimal
 
@@ -67,7 +67,7 @@ type OrderLineItem =
 
 type OrderDetails =
     { CustomerId: Id<Customer>
-      Timestamp: OffsetDateTime
+      Timestamp: DateTimeOffset
       LineItems: IDictionary<Id<Coffee>, Quantity> }
 
 type Order =
@@ -102,8 +102,8 @@ module RoastName =
 type Roast =
     { Name: RoastName
       Customers: Id<Customer> list
-      RoastDate: LocalDate
-      OrderByDate: LocalDate
+      RoastDate: DateTime
+      OrderByDate: DateTime
       Orders: Order list
       Coffees: IDictionary<CoffeeReferenceId, Id<Coffee>>
       Status: RoastStatus
@@ -111,8 +111,8 @@ type Roast =
     static member Empty =
         { Name = RoastName.create "<empty>" |> unsafeAssertOk
           Customers = List.empty
-          RoastDate = LocalDate.MinIsoValue.PlusDays(1)
-          OrderByDate = LocalDate.MinIsoValue
+          RoastDate = DateTime.MinValue.AddDays(1)
+          OrderByDate = DateTime.MinValue
           Orders = List.empty
           Coffees = dict List.empty
           Status = NotPublished
@@ -120,8 +120,8 @@ type Roast =
 
 type RoastCreated =
     { Name: RoastName
-      RoastDate: LocalDate
-      OrderByDate: LocalDate }
+      RoastDate: DateTime
+      OrderByDate: DateTime }
 
 module Roast =
     type Event =
@@ -132,7 +132,7 @@ module Roast =
         | CoffeesRemoved of Id<Coffee> list
         | CustomersAdded of Id<Customer> list
         | CustomersRemoved of Id<Customer> list
-        | RoastDatesChanged of roastDate: LocalDate * orderByDate: LocalDate
+        | RoastDatesChanged of roastDate: DateTime * orderByDate: DateTime
         | RoastStarted of summary: string
         | RoastCompleted
         | Created of RoastCreated
@@ -140,14 +140,14 @@ module Roast =
         | InvoicePaid of Id<Customer> * PaymentMethod
 
     type Command =
-        | PlaceOrder of Id<Customer> * OrderLineItem list * OffsetDateTime
+        | PlaceOrder of customerId: Id<Customer> * lineItems: OrderLineItem list * timestamp: DateTimeOffset
         | CancelOrder of Id<Customer>
         | ConfirmOrder of Id<Customer>
         | AddCoffees of Id<Coffee> list
         | RemoveCoffees of Id<Coffee> list
         | AddCustomers of Id<Customer> list
         | RemoveCustomers of Id<Customer> list
-        | UpdateRoastDates of roastDate: LocalDate * orderByDate: LocalDate
+        | UpdateRoastDates of roastDate: DateTime * orderByDate: DateTime
         | StartRoast
         | CompleteRoast
         | Create of RoastCreated
@@ -231,7 +231,7 @@ module Roast =
         (allRoasts: seq<Id<Roast> * RoastStatus>)
         (allCustomers: seq<Id<Customer> * Customer>)
         (allCoffees: seq<Id<Coffee> * Coffee>)
-        (today: LocalDate)
+        (today: DateTime)
         (roast: Roast)
         cmd
         =

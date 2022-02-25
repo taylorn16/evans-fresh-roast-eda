@@ -1,7 +1,5 @@
 ﻿namespace EvansFreshRoast.EventStore
 
-open System
-open NodaTime
 open EvansFreshRoast.Utils
 open Npgsql.FSharp
 open Thoth.Json.Net
@@ -43,7 +41,7 @@ module Db =
                           "eventId", Sql.uuid domainEvent.Id
                           "eventName", Sql.string domainEvent.EventName
                           "payload", Sql.string domainEvent.Payload
-                          "timestamp", Sql.timestamptz (domainEvent.Timestamp.ToDateTimeOffset()) ]
+                          "timestamp", Sql.timestamptz domainEvent.Timestamp ]
                     |> Sql.executeNonQueryAsync
                     |> Async.AwaitTask
                     |> Async.map Ok
@@ -75,8 +73,7 @@ module Db =
                           EventName = read.string "event_name"
                           Payload = read.string "event_payload"
                           Timestamp =
-                            read.datetimeOffset "created_timestamp"
-                            |> OffsetDateTime.FromDateTimeOffset })
+                            read.datetimeOffset "created_timestamp" })
                     |> Async.AwaitTask
                     |> Async.map Ok
             with

@@ -29,13 +29,13 @@ let decodeCreateRoastCmd: Decoder<Command> =
               RoastDate = stDt
               OrderByDate = obDt })
         (Decode.field "name" decodeRoastName)
-        (Decode.field "roastDate" decodeLocalDate)
-        (Decode.field "orderByDate" decodeLocalDate)
+        (Decode.field "roastDate" Decode.datetime)
+        (Decode.field "orderByDate" Decode.datetime)
     |> Decode.map Create
 
 let decodeChangeRoastDatesCmd: Decoder<Command> =
     Decode.map2
         (fun stDt obDt -> stDt, obDt)
-        (Decode.field "roastDate" decodeLocalDate)
-        (Decode.field "orderByDate" decodeLocalDate)
+        (Decode.field "roastDate" Decode.datetime)
+        (Decode.field "orderByDate" Decode.datetime)
     |> Decode.map UpdateRoastDates

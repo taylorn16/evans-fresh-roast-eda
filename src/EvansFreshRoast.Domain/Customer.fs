@@ -69,8 +69,7 @@ type CustomerCreateFields =
       PhoneNumber: UsPhoneNumber }
 
 type CustomerUpdateFields =
-    { Name: CustomerName option
-      PhoneNumber: UsPhoneNumber option } // TODO: 
+    { Name: CustomerName option }
 
 module Customer =
     type Event =
@@ -98,8 +97,7 @@ module Customer =
                 Ok <| Created fields
         | Update fields ->
             let hasAtLeastOneField =
-                [ fields.Name |> Option.isSome
-                  fields.PhoneNumber |> Option.isSome ]
+                [ fields.Name |> Option.isSome ]
                 |> Seq.exists ((=) true)
 
             if hasAtLeastOneField then
@@ -122,13 +120,7 @@ module Customer =
             let name =
                 fields.Name |> Option.defaultValue customer.Name
 
-            let phone =
-                fields.PhoneNumber
-                |> Option.defaultValue customer.PhoneNumber
-
-            { customer with
-                Name = name
-                PhoneNumber = phone }
+            { customer with Name = name }
 
         | Subscribed -> { customer with Status = CustomerStatus.Subscribed }
 

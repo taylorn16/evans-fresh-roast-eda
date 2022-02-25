@@ -1,6 +1,10 @@
 module EvansFreshRoast.Serialization.Customer
 
+#if FABLE_COMPILER
+open Thoth.Json
+#else
 open Thoth.Json.Net
+#endif
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Customer
 
@@ -15,9 +19,7 @@ let encodeCustomerEvent event =
         Encode.object
             [ "$$event", Encode.string "created"
               if fields.Name.IsSome then
-                  "name", Encode.string <| CustomerName.value fields.Name.Value
-              if fields.PhoneNumber.IsSome then
-                  "phoneNumber", Encode.string <| UsPhoneNumber.value fields.PhoneNumber.Value ]
+                  "name", Encode.string <| CustomerName.value fields.Name.Value ]
 
     | Subscribed -> Encode.string "subscribed"
 
@@ -58,13 +60,9 @@ let decodeCreated: Decoder<Event> =
         (Decode.field "phoneNumber" decodePhoneNumber)
 
 let decodeUpdated: Decoder<Event> =
-    Decode.map2
-        (fun name phoneNumber ->
-            Updated
-                { Name = name
-                  PhoneNumber = phoneNumber })
+    Decode.map
+        (fun name -> Updated { Name = name })
         (Decode.optional "name" decodeCustomerName)
-        (Decode.optional "phoneNumber" decodePhoneNumber)
 
 let decodeUpdatedCreated: Decoder<Event> =
     Decode.field "$$event" Decode.string

@@ -9,7 +9,6 @@
     <PackageReference Include="Microsoft.AspNet.SignalR" Version="2.4.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.1" />
-    <PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.2.2" />
     <PackageReference Include="Twilio" Version="5.70.0" />
     <PackageReference Include="Twilio.AspNet.Core" Version="5.68.3" />

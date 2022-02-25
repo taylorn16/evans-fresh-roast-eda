@@ -1,6 +1,10 @@
 module EvansFreshRoast.Serialization.Coffee
 
+#if FABLE_COMPILER
+open Thoth.Json
+#else
 open Thoth.Json.Net
+#endif
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Coffee
 

@@ -6,6 +6,7 @@ open Fable.React
 open Fable.React.Props
 open Fable.Core.JsInterop
 open Types
+open EvansFreshRoast.Dto
 
 type State =
     { OneTimePassword: string
@@ -73,7 +74,11 @@ let view (state: State) (dispatch: Msg -> unit) =
     fragment [] [
         img [ Src pouroverImgUrl; Class "img-fluid" ]
         h1 [ Class "text-center" ] [ str "Enter Security Code" ]
-        div [] [
+        form [
+            OnSubmit(fun ev ->
+                ev.preventDefault()
+                dispatch <| LoginRequest Started)
+        ] [
             div [ Class "mb-3" ] [
                 label [ Class "form-label" ] [ str "Code" ]
                 input [
@@ -96,9 +101,6 @@ let view (state: State) (dispatch: Msg -> unit) =
                     Class "btn btn-primary btn-lg"
                     if Deferred.isInProgress state.LoginRequest then
                         Class "btn btn-primary btn-lg disabled"
-                    OnClick(fun ev ->
-                        ev.preventDefault()
-                        dispatch <| LoginRequest Started)
                 ] [
                     if Deferred.isInProgress state.LoginRequest then
                         span [ Class "spinner-grow spinner-grow-sm" ] []

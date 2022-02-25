@@ -11,8 +11,6 @@ open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
 open System.Text.Json
-open NodaTime.Serialization.SystemTextJson
-open NodaTime
 open EvansFreshRoast.Api.EventConsumers.ReadModels
 open EvansFreshRoast.Api.EventConsumers.Sms
 open Microsoft.Extensions.Configuration
@@ -21,15 +19,12 @@ open EvansFreshRoast.Api
 open RabbitMQ.Client
 open Microsoft.IdentityModel.Tokens
 open System.Text
+open EvansFreshRoast.Api.HttpHandlers
 
 module Program =
     // ---------------------------------
     // Web app
     // ---------------------------------
-    let authenticate: HttpHandler =
-        requiresAuthentication
-            (challenge JwtBearerDefaults.AuthenticationScheme >=> text "Please authenticate.")
-
     let webApp (compositionRoot: CompositionRoot) =
         choose [
             subRoute "/api/v1/coffees" (authenticate >=> Coffees.Router.router compositionRoot)
@@ -56,7 +51,7 @@ module Program =
     // ---------------------------------
     let configureCors (builder: CorsPolicyBuilder) =
         builder
-            .WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:3000")
+            .WithOrigins("http://localhost:5000", "https://localhost:5001")
             .AllowAnyMethod()
             .AllowAnyHeader()
         |> ignore
@@ -76,7 +71,7 @@ module Program =
             .UseAuthentication()
             .UseRouting()
             .UseEndpoints(fun endpoints ->
-                endpoints.MapHub<TestHub>("/ws") |> ignore)
+                endpoints.MapHub<TestHub>("/api/v1/ws") |> ignore)
             .UseGiraffe(webApp compositionRoot)
 
     let configureServices (settings: Settings) (compositionRoot: CompositionRoot) (services: IServiceCollection) =
@@ -93,8 +88,7 @@ module Program =
         services.AddSignalR() |> ignore
 
         let serializerOptions =
-            let opts =
-                JsonSerializerOptions().ConfigureForNodaTime(DateTimeZoneProviders.Tzdb)
+            let opts = JsonSerializerOptions()
             opts.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
             opts
 

@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);FABLE_COMPILER</DefineConstants>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Include="src/Shared/AsyncHelpers.fs" />
+    <Compile Include="src/Shared/Types.fs" />
+    <Compile Include="src/Shared/Api.fs" />
+    <Compile Include="src/Shared/Routes.fs" />
+    <Compile Include="src/Pages/Login.fs" />
+    <Compile Include="src/Pages/VerifyOtp.fs" />
+    <Compile Include="src/Pages/Roasts.fs" />
+    <Compile Include="src/Pages/NewCoffee.fs" />
+    <Compile Include="src/Pages/Coffee.fs" />
+    <Compile Include="src\Pages\Coffees.fs" />
+    <Compile Include="src\Pages\NewCustomer.fs" />
+    <Compile Include="src\Pages\Customers.fs" />
+    <Compile Include="src\State.fs" />
+    <Compile Include="src\RootView.fs" />
+    <Compile Include="src/App.fs" />
+    <Content Include="src\styles.scss" />
+    <Content Include="src\index.html" />
+    <Content Include="src\pourover.jpg" />
+    <Content Include="src\espresso.jpg" />
+    <Content Include="package.json" />
+    <Content Include="package-lock.json" />
+    <Content Include="vite.config.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fable.Elmish" Version="3.1.0" />
+    <PackageReference Include="Fable.Elmish.Browser" Version="3.0.4" />
+    <PackageReference Include="Fable.Elmish.React" Version="3.0.1" />
+    <PackageReference Include="Fable.SignalR" Version="0.11.5" />
+    <PackageReference Include="Fable.SignalR.Elmish" Version="0.11.5" />
+    <PackageReference Include="Fable.SimpleHttp" Version="3.1.0" />
+    <PackageReference Include="Thoth.Json" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EvansFreshRoast.Dto\EvansFreshRoast.Dto.fsproj" />
+    <ProjectReference Include="..\EvansFreshRoast.Serialization\EvansFreshRoast.Serialization.fsproj" />
+  </ItemGroup>
+
+</Project>

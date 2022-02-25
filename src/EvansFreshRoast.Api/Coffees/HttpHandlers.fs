@@ -40,7 +40,8 @@ let getCoffees (compositionRoot: CompositionRoot) (next: HttpFunc) (ctx: HttpCon
                   Name = CoffeeName.value coff.Name
                   Description = CoffeeDescription.value coff.Description
                   PricePerBag = UsdPrice.value coff.PricePerBag
-                  WeightPerBag = OzWeight.value coff.WeightPerBag })
+                  WeightPerBag = OzWeight.value coff.WeightPerBag
+                  IsActive = coff.Status = Active })
 
         return! Successful.OK coffeeDtos next ctx
     }
@@ -56,7 +57,8 @@ let getCoffee (compositionRoot: CompositionRoot) id (next: HttpFunc) (ctx: HttpC
                       Name = CoffeeName.value coffee.Name
                       Description = CoffeeDescription.value coffee.Description
                       PricePerBag = UsdPrice.value coffee.PricePerBag
-                      WeightPerBag = OzWeight.value coffee.WeightPerBag }
+                      WeightPerBag = OzWeight.value coffee.WeightPerBag
+                      IsActive = coffee.Status = Active }
 
                 return! Successful.OK coffeeDto next ctx
             | None ->
@@ -90,8 +92,9 @@ let postCoffee (compositionRoot: CompositionRoot): HttpHandler =
         match! handleCommandAsync compositionRoot ctx (Id.newId()) cmd with
         | Ok event ->
             let response =
-                {| coffeeId = event.AggregateId |> Id.value
-                   eventId = event.Id |> Id.value |}
+                { AggregateId = event.AggregateId |> Id.value
+                  EventId = event.Id |> Id.value
+                  Message = None }
             return! Successful.ACCEPTED response next ctx
 
         | Error handlerErr ->

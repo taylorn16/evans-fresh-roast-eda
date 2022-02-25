@@ -32,3 +32,11 @@ html, body {
 #main-content {
     padding-top: 55px;
 }
+
+.border-dashed {
+    border-style: dashed !important;
+}
+
+.h-fullpage {
+    height: calc(100vh - 55px)
+}

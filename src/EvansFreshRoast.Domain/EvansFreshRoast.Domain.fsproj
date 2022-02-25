@@ -11,9 +11,6 @@
     <Compile Include="Roast.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="NodaTime" Version="3.0.9" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Utils\Utils.fsproj" />
     <ProjectReference Include="..\EvansFreshRoast.Framework\EvansFreshRoast.Framework.fsproj" />
   </ItemGroup>

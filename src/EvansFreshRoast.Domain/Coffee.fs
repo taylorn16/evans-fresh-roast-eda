@@ -4,7 +4,6 @@ open EvansFreshRoast.Utils
 open EvansFreshRoast.Framework
 
 type CoffeeDescription = private CoffeeDescription of String200
-
 module CoffeeDescription =
     let create desc =
         String200.create desc
@@ -15,7 +14,6 @@ module CoffeeDescription =
     let value = apply id
 
 type CoffeeName = CoffeeName of String100
-
 module CoffeeName =
     let create desc =
         String100.create desc |> Result.map CoffeeName
@@ -29,7 +27,6 @@ type CoffeeStatus =
     | Inactive
 
 type UsdPrice = private UsdPrice of decimal
-
 module UsdPrice =
     let create price =
         match price with
@@ -44,7 +41,6 @@ module UsdPrice =
     let zero = UsdPrice 0m
 
 type OzWeight = private OzWeight of decimal
-
 module OzWeight =
     let create ounces =
         match ounces with
@@ -110,6 +106,7 @@ module Coffee =
                 Error CoffeeAlreadyCreated
             else
                 Ok <| Created fields
+                
         | Update fields ->
             let hasAtLeastOneField =
                 [ fields.Name |> Option.isSome
@@ -134,7 +131,8 @@ module Coffee =
                 Name = fields.Name
                 Description = fields.Description
                 PricePerBag = fields.PricePerBag
-                WeightPerBag = fields.WeightPerBag }
+                WeightPerBag = fields.WeightPerBag
+                Status = Active }
                 
         | Updated fields ->
             let name =

@@ -1,7 +1,6 @@
 namespace EvansFreshRoast.EventStore
 
 open System
-open NodaTime
 
 type DomainEvent =
     { Id: Guid
@@ -10,7 +9,7 @@ type DomainEvent =
       Version: int64
       EventName: string
       Payload: string
-      Timestamp: OffsetDateTime }
+      Timestamp: DateTimeOffset }
 
 type EventStoreDbError =
     | ErrorSavingEvent of DomainEvent * exn

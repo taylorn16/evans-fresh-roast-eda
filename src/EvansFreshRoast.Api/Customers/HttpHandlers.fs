@@ -62,8 +62,9 @@ let postCustomer (compositionRoot: CompositionRoot): HttpHandler =
         match! handleCommandAsync compositionRoot ctx (Id.newId()) cmd with
         | Ok event ->
             let response =
-                {| customerId = event.AggregateId |> Id.value
-                   eventId = event.Id |> Id.value |}
+                { AggregateId = event.AggregateId |> Id.value
+                  EventId = event.Id |> Id.value
+                  Message = None }
 
             return! Successful.ACCEPTED response next ctx
 

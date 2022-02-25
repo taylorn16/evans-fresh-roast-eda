@@ -16,7 +16,5 @@ let decodeCreateCustomerCmd: Decoder<Command> =
 
 let decodeUpdateCustomerCmd: Decoder<Command> =
     Decode.map
-        (fun nm ->
-            { Name = nm
-              PhoneNumber = None } |> Update)
+        (fun nm -> Update { Name = nm })
         (Decode.optional "name" decodeCustomerName)

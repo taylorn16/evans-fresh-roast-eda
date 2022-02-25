@@ -1,29 +1,31 @@
 module Pages.NewCoffee
 
 open AsyncHelpers
-open Types
 open Elmish
 open Fable.React
 open Fable.React.Props
 open System
+open Routes
+open EvansFreshRoast.Dto
 
 type State =
-    { Coffee: Coffee
-      SaveCoffee: Deferred<Result<AsyncApiEventResponse, string>> }
+    { Coffee: CreateCoffeeRequest
+      SaveCoffee: Deferred<Result<EventAcceptedResponse, string>> }
 
 type Msg =
     | NameUpdated of string
     | DescriptionUpdated of string
     | PriceUpdated of decimal
     | WeightUpdated of decimal
-    | SaveCoffee of AsyncOperationEvt<Result<AsyncApiEventResponse, string>>
+    | SaveCoffee of AsyncOperationEvt<Result<EventAcceptedResponse, string>>
+    | CoffeeCreated of id: Guid
 
 let init() =
     let empty =
-        { Name = CoffeeName.create ""
-          Description = CoffeeDescription.create ""
-          PricePerBag = UsdPrice.create 0m
-          WeightPerBag = OzWeight.create 0m }
+        { Name = ""
+          Description = ""
+          PricePerBag = 0m
+          WeightPerBag = 0m }
 
     { Coffee = empty
       SaveCoffee = NotStarted },
@@ -33,22 +35,22 @@ let update msg state =
     match msg with
     | NameUpdated nm ->
         { state with
-            Coffee = { state.Coffee with Name = CoffeeName.create nm } },
+            Coffee = { state.Coffee with Name = nm } },
         Cmd.none
 
     | DescriptionUpdated desc ->
         { state with
-            Coffee = { state.Coffee with Description = CoffeeDescription.create desc } },
+            Coffee = { state.Coffee with Description = desc } },
         Cmd.none
 
     | PriceUpdated pr ->
         { state with
-            Coffee = { state.Coffee with PricePerBag = UsdPrice.create pr } },
+            Coffee = { state.Coffee with PricePerBag = pr } },
         Cmd.none
 
     | WeightUpdated wt ->
         { state with
-            Coffee = { state.Coffee with WeightPerBag = OzWeight.create wt } },
+            Coffee = { state.Coffee with WeightPerBag = wt } },
         Cmd.none
 
     | SaveCoffee Started ->
@@ -62,9 +64,16 @@ let update msg state =
         
     | SaveCoffee (Finished resp) ->
         { state with SaveCoffee = Resolved resp }, Cmd.none
+        
+    | CoffeeCreated id ->
+        match state.SaveCoffee with
+        | Resolved(Ok { AggregateId = coffeeId }) when coffeeId = id ->
+            state, Route.navigateTo (Route.Coffee id)
+                
+        | _ -> state, Cmd.none
 
 let formInput label' value placeholder dispatch =
-    fragment [] [
+    div [ Class "mb-3" ] [
         label [ Class "form-label" ] [ str label' ]
         input [
             Props.Type "text"
@@ -72,6 +81,7 @@ let formInput label' value placeholder dispatch =
             Placeholder placeholder
             Value value
             OnInput dispatch
+            Required true
         ]
     ]
 
@@ -92,48 +102,44 @@ let emptyIfZero: decimal -> string =
 let view (state: State) (dispatch: Msg -> unit) =
     fragment [] [
         h1 [ Class "mt-3" ] [ str "Add New Coffee" ]
-        div [ Class "mb-3" ] [
+        form [
+            OnSubmit(fun ev ->
+                ev.preventDefault()
+                dispatch <| SaveCoffee Started)
+        ] [
             formInput
                 "Name"
-                (CoffeeName.value state.Coffee.Name)
+                state.Coffee.Name
                 "Colombian"
                 (fun ev -> dispatch <| NameUpdated ev.Value)
-        ]
-        div [ Class "mb-3" ] [
             formInput
                 "Description"
-                (CoffeeDescription.value state.Coffee.Description)
+                state.Coffee.Description
                 "Notes of delicious, tasty, and awesome"
                 (fun ev -> dispatch <| DescriptionUpdated ev.Value)
-        ]
-        div [ Class "mb-3" ] [
             formInput
                 "Weight (oz/per bag)"
-                (OzWeight.value state.Coffee.WeightPerBag |> emptyIfZero)
-                "16.0"
+                (state.Coffee.WeightPerBag |> emptyIfZero)
+                "16.0" // TODO: figure out why these aren't parsing correctly with decimal points
                 (fun ev -> dispatch <| WeightUpdated (parseDecDef ev.Value))
-        ]
-        div [ Class "mb-3" ] [
             formInput
                 "Price (USD/per bag)"
-                (UsdPrice.value state.Coffee.PricePerBag |> emptyIfZero)
+                (state.Coffee.PricePerBag |> emptyIfZero)
                 "12.50"
                 (fun ev -> dispatch <| PriceUpdated (parseDecDef ev.Value))
-        ]
-        div [ Class "d-flex justify-content-end" ] [
+            div [ Class "d-flex justify-content-end" ] [
                 button [
+                    Props.Type "submit"
                     Class "btn btn-primary btn-lg"
                     if Deferred.isInProgress state.SaveCoffee then
                         Class "btn btn-primary btn-lg disabled"
-                    OnClick(fun ev ->
-                        ev.preventDefault()
-                        dispatch <| SaveCoffee Started)
                 ] [
                     if Deferred.isInProgress state.SaveCoffee then
-                        span [ Class "spinner-grow spinner-grow-sm ps-2" ] []
+                        span [ Class "spinner-grow spinner-grow-sm px-2" ] []
                         str "Saving..."
                     else
                         str "Add Coffee"
                 ]
             ]
+        ]
     ]

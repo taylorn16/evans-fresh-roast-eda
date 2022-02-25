@@ -1,5 +1,9 @@
 version: "2.2"
 
+volumes:
+  eventspgdata:
+  readspgdata:
+
 services:
   api:
     build: ./src
@@ -19,7 +23,7 @@ services:
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - /tmp/evansfreshroast-eventstoredb-data:/var/lib/postgresql/data:rw
+      - eventspgdata:/var/lib/postgresql/data:rw
 
   readmodelsdb:
     build: ./src/EvansFreshRoast.ReadModels
@@ -30,7 +34,7 @@ services:
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - /tmp/evansfreshroast-readmodelsdb-data:/var/lib/postgresql/data:rw
+      - readspgdata:/var/lib/postgresql/data:rw
 
   rabbitmq:
     image: rabbitmq:3-management

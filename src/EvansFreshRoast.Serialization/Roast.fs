@@ -1,6 +1,10 @@
 module EvansFreshRoast.Serialization.Roast
 
+#if FABLE_COMPILER
+open Thoth.Json
+#else
 open Thoth.Json.Net
+#endif
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.Domain.Roast
@@ -15,7 +19,7 @@ let encodeOrderDetails (order: OrderDetails) =
     let tuple (kvp: KeyValuePair<'a, 'b>) = kvp.Key, kvp.Value
     
     Encode.object [ "customerId", Encode.guid <| Id.value order.CustomerId
-                    "timestamp", encodeOffsetDateTime order.Timestamp
+                    "timestamp", Encode.datetimeOffset order.Timestamp
                     "lineItems",
                     Encode.array (
                         order.LineItems
@@ -27,8 +31,8 @@ let encodeRoastEvent event =
     match event with
     | Created fields ->
         Encode.object [ "name", Encode.string <| RoastName.value fields.Name
-                        "roastDate", encodeLocalDate fields.RoastDate
-                        "orderByDate", encodeLocalDate fields.OrderByDate ]
+                        "roastDate", Encode.datetime fields.RoastDate
+                        "orderByDate", Encode.datetime fields.OrderByDate ]
 
     | OrderPlaced details ->
         encodeOrderDetails details
@@ -57,8 +61,8 @@ let encodeRoastEvent event =
                         ) ]
 
     | RoastDatesChanged (roastDate, orderByDate) ->
-        Encode.object [ "roastDate", encodeLocalDate roastDate
-                        "orderByDate", encodeLocalDate orderByDate ]
+        Encode.object [ "roastDate", Encode.datetime roastDate
+                        "orderByDate", Encode.datetime orderByDate ]
 
     | RoastStarted summary ->
         Encode.object [ "summary", Encode.string summary ]
@@ -128,7 +132,7 @@ let decodeOrderPlaced: Decoder<Event> =
                   LineItems = dict lineItems }
             ))
         (Decode.field "customerId" decodeId)
-        (Decode.field "timestamp" decodeOffsetDateTime)
+        (Decode.field "timestamp" Decode.datetimeOffset)
         (Decode.field "lineItems" (Decode.array decodeLineItem))
 
 let decodeInvoiceAmount: Decoder<UsdInvoiceAmount> =
@@ -188,8 +192,8 @@ let decodeCustomersRemoved: Decoder<Event> =
 let decodeRoastDatesChanged: Decoder<Event> =
     Decode.map2
         (fun roastDate orderByDate -> RoastDatesChanged(roastDate, orderByDate))
-        (Decode.field "roastDate" decodeLocalDate)
-        (Decode.field "orderByDate" decodeLocalDate)
+        (Decode.field "roastDate" Decode.datetime)
+        (Decode.field "orderByDate" Decode.datetime)
 
 let decodeRoastCompletedOrReminderSent: Decoder<Event> =
     Decode.string
@@ -214,8 +218,8 @@ let decodeCreated: Decoder<Event> =
                       RoastDate = rdt
                       OrderByDate = obdt })
         (Decode.field "name" decodeRoastName)
-        (Decode.field "roastDate" decodeLocalDate)
-        (Decode.field "orderByDate" decodeLocalDate)
+        (Decode.field "roastDate" Decode.datetime)
+        (Decode.field "orderByDate" Decode.datetime)
 
 let decodeRoastStarted: Decoder<Event> =
     Decode.field "summary" Decode.string

@@ -1,11 +1,11 @@
 namespace EvansFreshRoast.Api.Composition
 
+open System
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Domain
 open EvansFreshRoast.EventStore
 open EvansFreshRoast.Api
 open EvansFreshRoast.Utils
-open NodaTime
 open RabbitMQ.Client
 open EvansFreshRoast.ReadModels
 open Npgsql.FSharp
@@ -25,8 +25,8 @@ type CompositionRoot =
       SaveRoastEvent: SaveEvent<Roast, Roast.Event, EventStoreError>
       GetRoast: Id<Roast> -> Async<option<RoastDetailedView>>
       GetAllRoasts: unit -> Async<list<RoastSummaryView>>
-      GetToday: unit -> LocalDate
-      GetNow: unit -> OffsetDateTime
+      GetToday: unit -> DateTime
+      GetNow: unit -> DateTimeOffset
       RabbitMqConnectionFactory: IConnectionFactory
       TwilioFromPhoneNumber: UsPhoneNumber
       ReadStoreConnectionString: ConnectionString
@@ -121,8 +121,8 @@ module CompositionRoot =
           SaveRoastEvent = roastsWorkflow.SaveEvent
           GetRoast = roastsWorkflow.GetRoast
           GetAllRoasts = fun _ -> roastsWorkflow.GetAllRoasts coffeesWorkflow.GetAllCoffees
-          GetToday = fun _ -> LocalDate.FromDateTime(System.DateTime.Today)
-          GetNow = fun _ -> OffsetDateTime.FromDateTimeOffset(System.DateTimeOffset.Now)
+          GetToday = fun _ -> DateTime.Today
+          GetNow = fun _ -> DateTimeOffset.Now
           RabbitMqConnectionFactory = rabbitMqConnectionFactory
           TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk
           ReadStoreConnectionString = readStoreConnectionString

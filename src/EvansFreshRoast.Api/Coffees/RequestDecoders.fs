@@ -18,7 +18,7 @@ let decodeUpdateCoffeeCmd: Decoder<Command> =
         (Decode.optional "weightPerBag" decodeWeight)
     |> Decode.map Update
 
-let decodeCreateCoffeeCmd: Decoder<Coffee.Command> =
+let decodeCreateCoffeeCmd: Decoder<Command> =
     Decode.map4
         (fun nm desc pr wt ->
             { Name = nm

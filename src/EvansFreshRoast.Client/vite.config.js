@@ -15,7 +15,8 @@ export default defineConfig({
                 cookieDomainRewrite: {
                     "localhost:5001": "localhost:3000"
                 },
-                secure: false
+                secure: false,
+                ws: true
             }
         }
     }

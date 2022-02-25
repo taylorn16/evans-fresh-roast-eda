@@ -1,6 +1,10 @@
 namespace EvansFreshRoast.Serialization
 
+#if FABLE_COMPILER
+open Thoth.Json
+#else
 open Thoth.Json.Net
+#endif
 open EvansFreshRoast.Framework
 open EvansFreshRoast.Serialization.Common
 
@@ -9,7 +13,7 @@ module DomainEvents =
         fun event ->
             Encode.object [ "id", encodeId event.Id
                             "aggregateId", encodeId event.AggregateId
-                            "timestamp", encodeOffsetDateTime event.Timestamp
+                            "timestamp", Encode.datetimeOffset event.Timestamp
                             "version", encodeAggregateVersion event.Version
                             "body", encodeEvent event.Body ]
 
@@ -23,6 +27,6 @@ module DomainEvents =
                   Body = body })
             (Decode.field "id" decodeId)
             (Decode.field "aggregateId" decodeId)
-            (Decode.field "timestamp" decodeOffsetDateTime)
+            (Decode.field "timestamp" Decode.datetimeOffset)
             (Decode.field "version" decodeAggregateVersion)
             (Decode.field "body" decodeEvent)

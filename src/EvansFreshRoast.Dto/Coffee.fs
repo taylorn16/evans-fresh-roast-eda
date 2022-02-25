@@ -13,4 +13,5 @@ type Coffee =
       Name: string
       Description: string
       PricePerBag: decimal
-      WeightPerBag: decimal }
+      WeightPerBag: decimal
+      IsActive: bool }

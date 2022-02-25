@@ -47,8 +47,8 @@ let update msg state =
     | GetCoffees Started ->
         let cmd =
             async {
-                match! Api.getCoffees() with
-                | Ok () ->
+                match! Api.getCoffees with
+                | Ok _ ->
                     return Ok []
 
                 | Error e ->
@@ -66,8 +66,8 @@ let update msg state =
     | GetCustomers Started ->
         let cmd =
             async {
-                match! Api.getCustomers() with
-                | Ok () ->
+                match! Api.getCustomers with
+                | Ok _ ->
                     return Ok []
 
                 | Error e ->
