@@ -1,5 +1,6 @@
 module EvansFreshRoast.Api.Roasts.HttpHandlers
 
+open System
 open EvansFreshRoast.Api.HttpHandlers
 open EvansFreshRoast.Api.Roasts.RequestDecoders
 open EvansFreshRoast.Dto
@@ -12,6 +13,7 @@ open EvansFreshRoast.Serialization.Roast
 open Giraffe
 open Microsoft.AspNetCore.Http
 open System.Collections.Generic
+open Thoth.Json.Net
 
 let withRoastId (id: System.Guid) (createHandler: Id<Roast> -> HttpHandler): HttpHandler = 
     fun next ctx -> task {
@@ -31,14 +33,14 @@ let postRoast (compositionRoot: CompositionRoot): HttpHandler =
                 handleCommand (Id.newId()) cmd,
                 cancellationToken = ctx.RequestAborted)
 
-        match! handleCommandTask with // Todo: think about response body and error cases
+        match! handleCommandTask with
         | Ok ev ->
-            let responseText =
-                sprintf
-                    "Roast created. Event Id = %A; Roast Id = %A"
-                    (Id.value ev.Id)
-                    (Id.value ev.AggregateId)
-            return! Successful.ACCEPTED responseText next ctx
+            let response =
+                { EventId = Id.value ev.Id
+                  AggregateId = Id.value ev.AggregateId
+                  Message = None }
+                
+            return! Successful.ACCEPTED response next ctx
 
         | Error handlerError ->
             return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -84,8 +86,13 @@ let putCoffees (compositionRoot: CompositionRoot) id: HttpHandler =
                     cancellationToken=ctx.RequestAborted)
 
             match! handleCommandTask with
-            | Ok _ ->
-                return! Successful.ACCEPTED "Coffees added." next ctx
+            | Ok evt ->
+                let response =
+                    { EventId = Id.value evt.Id
+                      AggregateId = Id.value evt.AggregateId
+                      Message = None }
+                    
+                return! Successful.ACCEPTED response next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -130,8 +137,13 @@ let putCustomers (compositionRoot: CompositionRoot) id: HttpHandler =
                     cancellationToken=ctx.RequestAborted)
 
             match! handleCommandTask with
-            | Ok _ ->
-                return! Successful.ACCEPTED "Customers added." next ctx
+            | Ok evt ->
+                let response =
+                    { EventId = Id.value evt.Id
+                      AggregateId = Id.value evt.AggregateId
+                      Message = None }
+                
+                return! Successful.ACCEPTED response next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -177,8 +189,12 @@ let putCustomerInvoice (compositionRoot: CompositionRoot) (roastId, customerId):
                     cancellationToken=ctx.RequestAborted)
 
             match! handleCommandTask with
-            | Ok _ ->
-                return! Successful.ACCEPTED "Invoice paid." next ctx
+            | Ok evt ->
+                let response =
+                    { EventId = Id.value evt.Id
+                      AggregateId = Id.value evt.AggregateId
+                      Message = None }
+                return! Successful.ACCEPTED response next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -199,8 +215,13 @@ let postOpenRoast (compositionRoot: CompositionRoot) id: HttpHandler =
                     cancellationToken=ctx.RequestAborted)
 
             match! handleCommandTask with
-            | Ok _ ->
-                return! Successful.ACCEPTED "Roast started!" next ctx
+            | Ok evt ->
+                let response =
+                    { EventId = Id.value evt.Id
+                      AggregateId = Id.value evt.AggregateId
+                      Message = None }
+                
+                return! Successful.ACCEPTED response next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -220,8 +241,12 @@ let postFollowUp (compositionRoot: CompositionRoot) id: HttpHandler =
                     cancellationToken=ctx.RequestAborted)
 
             match! handleCommandTask with
-            | Ok _ ->
-                return! Successful.ACCEPTED "Reminder sent!" next ctx
+            | Ok evt ->
+                let response =
+                    { EventId = Id.value evt.Id
+                      AggregateId = Id.value evt.AggregateId
+                      Message = None }
+                return! Successful.ACCEPTED response next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -241,8 +266,12 @@ let postCompletion (compositionRoot: CompositionRoot) id: HttpHandler =
                     cancellationToken=ctx.RequestAborted)
 
             match! handleCommandTask with
-            | Ok _ ->
-                return! Successful.ACCEPTED "Roast completed." next ctx
+            | Ok evt ->
+                let response =
+                    { EventId = Id.value evt.Id
+                      AggregateId = Id.value evt.AggregateId
+                      Message = None }
+                return! Successful.ACCEPTED response next ctx
 
             | Error handlerError ->
                 return! ServerErrors.INTERNAL_ERROR $"{handlerError}" next ctx
@@ -258,15 +287,15 @@ let getRoasts (compositionRoot: CompositionRoot): HttpHandler =
                 compositionRoot.GetAllRoasts(),
                 cancellationToken=ctx.RequestAborted)
         
-        let roastDtos =
+        let response =
             roasts
             |> List.map (fun rsv ->
                 { Id = rsv.Id |> Id.value
                   Name = rsv.Name |> RoastName.value
-                  RoastDate = rsv.RoastDate.ToString("R", null)
-                  OrderByDate = rsv.OrderByDate.ToString("R", null)
+                  RoastDate = rsv.RoastDate
+                  OrderByDate = rsv.OrderByDate
                   CustomersCount = rsv.CustomersCount |> NonNegativeInt.value
-                  RoastStatus = rsv.RoastStatus |> string
+                  RoastStatus = rsv.RoastStatus
                   OrdersCount = rsv.OrdersCount |> NonNegativeInt.value
                   Coffees =
                     rsv.Coffees
@@ -274,8 +303,11 @@ let getRoasts (compositionRoot: CompositionRoot): HttpHandler =
                         { Id = coffeeId |> Id.value
                           Name = coffeeName |> CoffeeName.value }) }
             )
+            |> List.map RoastSummary.encode
+            |> Encode.list
+            |> Encode.toString 2
 
-        return! Successful.OK roastDtos next ctx
+        return! Successful.ok (text response) next ctx
     }
 
 let getRoast (compositionRoot: CompositionRoot) id: HttpHandler =
@@ -290,11 +322,11 @@ let getRoast (compositionRoot: CompositionRoot) id: HttpHandler =
             let dto =
                 { Id = roast.Id |> Id.value
                   Name = roast.Name |> RoastName.value
-                  RoastDate = roast.RoastDate.ToString("R", null)
-                  OrderByDate = roast.OrderByDate.ToString("R", null)
+                  RoastDate = roast.RoastDate
+                  OrderByDate = roast.OrderByDate
                   Customers = roast.Customers |> List.map Id.value
                   Coffees = roast.Coffees |> List.map Id.value
-                  Status = string roast.Status
+                  Status = roast.Status
                   SentRemindersCount = roast.SentRemindersCount |> NonNegativeInt.value
                   Orders =
                     roast.Orders
@@ -317,18 +349,23 @@ let getRoast (compositionRoot: CompositionRoot) id: HttpHandler =
                         match order with
                         | ConfirmedOrder(details, invoice) ->
                             { CustomerId = details.CustomerId |> Id.value
-                              Timestamp = details.Timestamp.ToString("o", null)
+                              Timestamp = details.Timestamp
                               Invoice = mapInvoice invoice
                               LineItems = mapLineItems details.LineItems }
 
                         | UnconfirmedOrder details ->
                             { CustomerId = details.CustomerId |> Id.value
-                              Timestamp = details.Timestamp.ToString("o", null)
+                              Timestamp = details.Timestamp
                               Invoice = None
                               LineItems = mapLineItems details.LineItems }
                     ) }
+                
+            let response =
+                dto
+                |> RoastDetails.encode
+                |> Encode.toString 2
                     
-            return! Successful.OK dto next ctx
+            return! Successful.ok (text response) next ctx
 
         | None ->
             return! RequestErrors.NOT_FOUND "Roast not found." next ctx

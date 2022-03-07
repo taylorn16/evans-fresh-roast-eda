@@ -8,6 +8,8 @@ type Route =
     | Login
     | VerifyOtp
     | Roasts
+    | NewRoast
+    | Roast of Guid
     | NewCoffee
     | Coffee of Guid
     | Coffees
@@ -23,6 +25,8 @@ type Route =
         oneOf
             [ map Login (s "login")
               map VerifyOtp (s "verifyotp")
+              map NewRoast (s "roasts" </> s "new")
+              map Roast (s "roasts" </> guid)
               map Roasts (s "roasts")
               map NewCoffee (s "coffees" </> s "new")
               map Coffee (s "coffees" </> guid)
@@ -36,6 +40,8 @@ type Route =
         | Login -> "login"
         | VerifyOtp -> "verifyotp"
         | Roasts -> "roasts"
+        | NewRoast -> "roasts/new"
+        | Roast id -> $"roasts/{id}"
         | NewCoffee -> "coffees/new"
         | Coffee id -> $"coffees/{id}"
         | Coffees -> "coffees"

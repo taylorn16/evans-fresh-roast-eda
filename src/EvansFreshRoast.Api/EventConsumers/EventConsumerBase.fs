@@ -1,5 +1,7 @@
 namespace EvansFreshRoast.Api.EventConsumers
 
+open EvansFreshRoast.Api
+open Microsoft.AspNetCore.SignalR
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Hosting
 open System.Threading
@@ -23,14 +25,15 @@ type EventConsumerBase<'State, 'Event>
       exchangeName: string,
       route: string,
       queueName: string,
-      decoder: Decoder<DomainEvent<'State, 'Event>> ) =
+      decoder: Decoder<DomainEvent<'State, 'Event>>,
+      domainEventsHub: IHubContext<DomainEventsHub> ) =
 
     let connection = connectionFactory.CreateConnection()
     let channel = connection.CreateModel()
 
     let cts = new CancellationTokenSource()
 
-    abstract member handleEvent: DomainEvent<'State, 'Event> -> Async<Result<unit, exn>>
+    abstract member handleEvent: DomainEvent<'State, 'Event> -> Async<Result<string option, exn>>
 
     interface IHostedService with
         member this.StartAsync(_: CancellationToken) = task {
@@ -60,9 +63,16 @@ type EventConsumerBase<'State, 'Event>
                     match domainEvent with
                     | Ok evt ->
                         match! this.handleEvent evt with
-                        | Ok () ->
+                        | Ok(Some payload) ->
+                            do! domainEventsHub.Clients.All.SendAsync("Send", payload)
+                                |> Async.AwaitTask
                             ack()
                             return ()
+                            
+                        | Ok None ->
+                            ack()
+                            return ()
+                            
                         | Error e ->
                             logger.LogError(e, "Exception in event consumer handleEvent.")
                             ack()

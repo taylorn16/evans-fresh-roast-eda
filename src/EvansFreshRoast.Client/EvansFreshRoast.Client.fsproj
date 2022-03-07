@@ -16,7 +16,9 @@
     <Compile Include="src/Shared/Routes.fs" />
     <Compile Include="src/Pages/Login.fs" />
     <Compile Include="src/Pages/VerifyOtp.fs" />
+    <Compile Include="src\Pages\Roast.fs" />
     <Compile Include="src/Pages/Roasts.fs" />
+    <Compile Include="src\Pages\NewRoast.fs" />
     <Compile Include="src/Pages/NewCoffee.fs" />
     <Compile Include="src/Pages/Coffee.fs" />
     <Compile Include="src\Pages\Coffees.fs" />
@@ -35,6 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fable.DateFunctions" Version="3.9.0" />
     <PackageReference Include="Fable.Elmish" Version="3.1.0" />
     <PackageReference Include="Fable.Elmish.Browser" Version="3.0.4" />
     <PackageReference Include="Fable.Elmish.React" Version="3.0.1" />

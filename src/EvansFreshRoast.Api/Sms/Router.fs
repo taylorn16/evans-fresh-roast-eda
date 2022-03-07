@@ -6,6 +6,6 @@ open EvansFreshRoast.Api.Sms.HttpHandlers
 
 let router (compositionRoot: CompositionRoot) = choose [
     POST >=> choose [
-        routeCix "(/?)" >=> verifyTwilioId compositionRoot >=> receiveIncomingSms compositionRoot
+        routeCix "/incoming(/?)" >=> verifyTwilioId compositionRoot >=> receiveIncomingSms compositionRoot
     ]
 ]

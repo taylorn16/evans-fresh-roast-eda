@@ -2,7 +2,7 @@ namespace EvansFreshRoast.Api
 
 open Microsoft.AspNetCore.SignalR
 
-type TestHub () =
+type DomainEventsHub () =
     inherit Hub()
 
     member __.PushMessageToClients(msg: string) =

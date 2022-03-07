@@ -44,14 +44,16 @@ let view (state: State) (_: Msg -> unit) =
         ]
         match state.Coffee with
         | Resolved(Ok coffee) ->
-            h2 [ Class "mt-3" ] [
-                str coffee.Name
+            h2 [ Class "mt-3" ] [ str coffee.Name ]
+            p [ Class "text-muted d-flex align-items-center" ] [
+                span [] [
+                    str $"""${coffee.PricePerBag.ToString("0.00")} / {coffee.WeightPerBag.ToString("0.0")} oz"""
+                ]
                 if coffee.IsActive then
-                    span [ Class "badge bg-primary fw-light float-end" ] [ str "Active" ]
+                    span [ Class "badge bg-success fw-light ms-2 text-uppercase" ] [ str "Active" ]
                 else
-                    span [ Class "badge bg-light text-dark fw-light float-end" ] [ str "Inactive" ]
+                    span [ Class "badge bg-secondary fw-light ms-2 text-uppercase" ] [ str "Inactive" ]
             ]
-            p [ Class "text-muted" ] [ str $"""${coffee.PricePerBag.ToString("0.00")} / {coffee.WeightPerBag.ToString("0.0")} oz""" ]
             p [ Class "lead" ] [ str coffee.Description ]
             button [ Class "btn btn-primary" ] [ str "Edit" ]
            

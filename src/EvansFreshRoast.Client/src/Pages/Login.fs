@@ -95,10 +95,11 @@ let view (state: State) (dispatch: Msg -> unit) =
                     Class "btn btn-primary btn-lg"
                     if Deferred.isInProgress state.AuthCode then
                         Class "btn btn-primary btn-lg disabled"
+                        Disabled true
                 ] [
                     if Deferred.isInProgress state.AuthCode then
                         span [ Class "spinner-grow spinner-grow-sm" ] []
-                        str "Loading..."
+                        str " Loading..."
                     else
                         str "Continue"
                         i [ Class "bi-arrow-right-square px-2" ] []

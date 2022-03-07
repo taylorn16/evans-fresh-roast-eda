@@ -30,7 +30,7 @@ let header session (dispatch: Msg -> unit) =
                 str "Evan's Fresh Roast"
             ]
             button [
-                Class "btn btn-link link-secondary"
+                Class "btn btn-link link-secondary me-1"
                 OnClick(fun _ -> dispatch SignedOut)
             ] [
                 str "Sign Out"
@@ -96,6 +96,12 @@ let view (state: State) (dispatch: Msg -> unit) =
         | Roasts st ->
             Pages.Roasts.view st (RoastsMsg >> dispatch)
 
+        | Roast st ->
+            Pages.Roast.view st (RoastMsg >> dispatch)
+        
+        | NewRoast st ->
+            Pages.NewRoast.view st (NewRoastMsg >> dispatch)
+        
         | NewCoffee st ->
             Pages.NewCoffee.view st (NewCoffeeMsg >> dispatch)
 

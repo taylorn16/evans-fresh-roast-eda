@@ -23,14 +23,18 @@ let decodeRemoveCustomersCmd: Decoder<Command> =
     |> Decode.map RemoveCustomers
 
 let decodeCreateRoastCmd: Decoder<Command> =
+    let decodeDateFromDto =
+        Decode.datetimeOffset
+        |> Decode.andThen (fun dto -> Decode.succeed dto.Date)
+    
     Decode.map3
         (fun nm stDt obDt ->
             { Name = nm
               RoastDate = stDt
               OrderByDate = obDt })
         (Decode.field "name" decodeRoastName)
-        (Decode.field "roastDate" Decode.datetime)
-        (Decode.field "orderByDate" Decode.datetime)
+        (Decode.field "roastDate" decodeDateFromDto)
+        (Decode.field "orderByDate" decodeDateFromDto)
     |> Decode.map Create
 
 let decodeChangeRoastDatesCmd: Decoder<Command> =

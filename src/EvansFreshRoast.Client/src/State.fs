@@ -27,6 +27,8 @@ type Page =
     | Login of Pages.Login.State
     | VerifyOtp of Pages.VerifyOtp.State
     | Roasts of Pages.Roasts.State
+    | NewRoast of Pages.NewRoast.State
+    | Roast of Pages.Roast.State
     | NewCoffee of Pages.NewCoffee.State
     | Coffee of Pages.Coffee.State
     | Coffees of Pages.Coffees.State
@@ -49,6 +51,8 @@ type Msg =
     | LoginMsg of Pages.Login.Msg
     | VerifyOtpMsg of Pages.VerifyOtp.Msg
     | RoastsMsg of Pages.Roasts.Msg
+    | NewRoastMsg of Pages.NewRoast.Msg
+    | RoastMsg of Pages.Roast.Msg
     | NewCoffeeMsg of Pages.NewCoffee.Msg
     | CoffeeMsg of Pages.Coffee.Msg
     | CoffeesMsg of Pages.Coffees.Msg
@@ -58,10 +62,10 @@ type Msg =
 let getRefreshSessionCmd session =
     async {
         let timeSpanUntilExpiration =
-            session.Expires.Subtract(DateTimeOffset.Now.AddSeconds(30))
+            session.Expires.Subtract(DateTimeOffset.Now.AddSeconds(10))
                 
         if timeSpanUntilExpiration.TotalMilliseconds > 0 then
-            do! Async.Sleep(timeSpanUntilExpiration.Add(TimeSpan.FromSeconds(15)))
+            do! Async.Sleep(timeSpanUntilExpiration.Subtract(TimeSpan.FromSeconds(5)))
             return SessionRefresh Started
         else
             return SignedOut
@@ -80,11 +84,12 @@ let getSaveSessionCmd session =
 
 let getSignalRConnectCmd session =
     Cmd.SignalR.connect SignalRHubRegistered <| fun hub ->
-        hub.withUrl("/api/v1/ws")
+        hub.withUrl("/api/v1/ws/domain-events")
             .withAutomaticReconnect()
             .configureLogging(LogLevel.Trace)
             .onMessage SignalRMessageReceived
 
+// TODO: move to separate file
 let setCurrentPage maybeRoute state =
     match state.Session, maybeRoute with
         | None, None ->
@@ -145,6 +150,18 @@ let setCurrentPage maybeRoute state =
             
             { state with CurrentPage = Customers st },
             cmd |> Cmd.map CustomersMsg
+            
+        | Some _, Some Route.NewRoast ->
+            let st, cmd = Pages.NewRoast.init()
+            
+            { state with CurrentPage = NewRoast st },
+            cmd |> Cmd.map NewRoastMsg
+            
+        | Some _, Some(Route.Roast id) ->
+            let st, cmd = Pages.Roast.init id
+            
+            { state with CurrentPage = Roast st },
+            cmd |> Cmd.map RoastMsg
         
         | _ ->
             { state with CurrentPage = NotFound }, Cmd.none
@@ -222,6 +239,7 @@ let update (msg: Msg) (state: State) =
         | None ->
             { state with Hub = Some hub }, Cmd.none
 
+    // TODO: this should be a separate file & function
     | SignalRMessageReceived encoded ->
         match Decode.fromString decodeEvent encoded with
         | Ok evt ->
@@ -244,8 +262,10 @@ let update (msg: Msg) (state: State) =
                 | _ -> state, Cmd.none
             
             | CustomerEvent { AggregateId = customerId; Body = customerEvt } ->
+                printfn $"%A{customerId}"
+                
                 match customerEvt with
-                | Customer.Created _ ->
+                | Customer.Created customer ->
                     match state.CurrentPage with
                     | NewCustomer newCustomerState ->
                         let newSt, cmd =
@@ -256,13 +276,98 @@ let update (msg: Msg) (state: State) =
                         { state with CurrentPage = NewCustomer newSt },
                         Cmd.map NewCustomerMsg cmd
                         
-                    | _ -> state, Cmd.none
+                    | Customers customersState ->
+                        let customer =
+                            { Id = Id.value customerId
+                              Name = CustomerName.value customer.Name
+                              PhoneNumber = UsPhoneNumber.value customer.PhoneNumber
+                              Status = Unconfirmed }
                         
-                | _ -> state, Cmd.none
+                        let newSt, cmd =
+                            Pages.Customers.update
+                                (Pages.Customers.Msg.CustomerAdded customer)
+                                customersState
+                                
+                        { state with CurrentPage = Customers newSt },
+                        Cmd.map CustomersMsg cmd
+                        
+                    | _ -> state, Cmd.none
                 
-            | _ -> state, Cmd.none
+                | Customer.Subscribed _ ->
+                    match state.CurrentPage with
+                    | Customers customerState ->
+                        let newSt, cmd =
+                            Pages.Customers.update
+                                (Pages.Customers.Msg.CustomerStatusChanged(Id.value customerId, Subscribed))
+                                customerState
+                                
+                        { state with CurrentPage = Customers newSt },
+                        Cmd.map CustomersMsg cmd
+                        
+                    | _ -> state, Cmd.none
+                   
+                | Customer.Unsubscribed _ ->
+                    match state.CurrentPage with
+                    | Customers customerState ->
+                        let newSt, cmd =
+                            Pages.Customers.update
+                                (Pages.Customers.Msg.CustomerStatusChanged(Id.value customerId, Unsubscribed))
+                                customerState
+                                
+                        { state with CurrentPage = Customers newSt },
+                        Cmd.map CustomersMsg cmd
+                        
+                    | _ -> state, Cmd.none
+                   
+                | _ -> state, Cmd.none
             
-        | Error _ -> state, Cmd.none
+            | RoastEvent { AggregateId = roastId; Body = roastEvt } ->
+                let applyRoastPageEvent msg =
+                    match state.CurrentPage with
+                    | Roast roastState ->
+                        let newSt, cmd = Pages.Roast.update msg roastState
+                        
+                        { state with CurrentPage = Roast newSt },
+                        Cmd.map RoastMsg cmd
+                        
+                    | _ -> state, Cmd.none
+                
+                match roastEvt with
+                | Roast.Created _ ->
+                    match state.CurrentPage with
+                    | NewRoast newRoastState ->
+                        let newSt, cmd =
+                            Pages.NewRoast.update
+                                (Pages.NewRoast.Msg.RoastCreated <| Id.value roastId)
+                                newRoastState
+                                
+                        { state with CurrentPage = NewRoast newSt },
+                        Cmd.map NewRoastMsg cmd
+                        
+                    | _ -> state, Cmd.none
+                    
+                | Roast.CoffeesAdded coffeeIds ->
+                    applyRoastPageEvent <| Pages.Roast.Msg.CoffeesAdded(Id.value roastId, coffeeIds |> List.map Id.value)
+                    
+                | Roast.CustomersAdded customerIds ->
+                    applyRoastPageEvent <| Pages.Roast.Msg.CustomersAdded(Id.value roastId, customerIds |> List.map Id.value)
+                    
+                | Roast.RoastStarted _ ->
+                    applyRoastPageEvent <| Pages.Roast.Msg.RoastOpened(Id.value roastId)
+                    
+                | Roast.RoastCompleted ->
+                    applyRoastPageEvent <| Pages.Roast.Msg.RoastClosed(Id.value roastId)
+                    
+                | Roast.InvoicePaid(customerId, _) ->
+                    applyRoastPageEvent <| Pages.Roast.Msg.OrderPaid(Id.value customerId)
+                    
+                | Roast.ReminderSent ->
+                    applyRoastPageEvent <| Pages.Roast.Msg.FollowUpSent(Id.value roastId)
+                    
+                | _ -> state, Cmd.none
+            
+        | Error _ ->
+            state, Cmd.none
 
     | LoginMsg loginMsg ->
         match state.CurrentPage with
@@ -334,6 +439,26 @@ let update (msg: Msg) (state: State) =
 
         | _ -> state, Cmd.none
 
+    | RoastMsg roastMsg ->
+        match state.CurrentPage with
+        | Roast roastState ->
+            let newState, cmd = Pages.Roast.update roastMsg roastState
+
+            { state with CurrentPage = Roast newState },
+            Cmd.map RoastMsg cmd
+
+        | _ -> state, Cmd.none
+    
+    | NewRoastMsg newRoastMsg ->
+        match state.CurrentPage with
+        | NewRoast newRoastState ->
+            let newState, cmd = Pages.NewRoast.update newRoastMsg newRoastState
+
+            { state with CurrentPage = NewRoast newState },
+            Cmd.map NewRoastMsg cmd
+
+        | _ -> state, Cmd.none
+    
     | NewCoffeeMsg msg ->
         match state.CurrentPage with
         | NewCoffee st ->

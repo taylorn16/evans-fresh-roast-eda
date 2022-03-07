@@ -35,7 +35,7 @@
     <Compile Include="Auth/RequestDecoders.fs" />
     <Compile Include="Auth/HttpHandlers.fs" />
     <Compile Include="Auth/Router.fs" />
-    <Compile Include="TestHub.fs" />
+    <Compile Include="DomainEventsHub.fs" />
     <Compile Include="EventConsumers/EventConsumerBase.fs" />
     <Compile Include="EventConsumers/ReadModels/CustomerReadModelConsumer.fs" />
     <Compile Include="EventConsumers/ReadModels/CoffeeReadModelConsumer.fs" />

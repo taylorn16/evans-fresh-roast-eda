@@ -30,7 +30,7 @@ module Program =
             subRoute "/api/v1/coffees" (authenticate >=> Coffees.Router.router compositionRoot)
             subRoute "/api/v1/customers" (authenticate >=> Customers.Router.router compositionRoot)
             subRoute "/api/v1/roasts" (authenticate >=> Roasts.Router.router compositionRoot)
-            subRoute "/api/v1/sms" (authenticate >=> Sms.Router.router compositionRoot)
+            subRoute "/api/v1/sms" (Sms.Router.router compositionRoot)
             subRoute "/api/v1/auth" (Auth.Router.router compositionRoot)
             routeCix "(/?)" >=> htmlFile "wwwroot/index.html"
             setStatusCode 404 >=> text "Not Found"
@@ -60,6 +60,8 @@ module Program =
         let env =
             app.ApplicationServices.GetService<IWebHostEnvironment>()
 
+        Console.WriteLine($"Is Development Env: %A{env.IsDevelopment()}")
+        
         (match env.IsDevelopment() with
         | true -> app.UseDeveloperExceptionPage()
         | false ->
@@ -71,7 +73,7 @@ module Program =
             .UseAuthentication()
             .UseRouting()
             .UseEndpoints(fun endpoints ->
-                endpoints.MapHub<TestHub>("/api/v1/ws") |> ignore)
+                endpoints.MapHub<DomainEventsHub>("/api/v1/ws/domain-events") |> ignore)
             .UseGiraffe(webApp compositionRoot)
 
     let configureServices (settings: Settings) (compositionRoot: CompositionRoot) (services: IServiceCollection) =
@@ -143,9 +145,8 @@ module Program =
 
         if compositionRoot.TwilioAccountSid <> "" then
             Twilio.TwilioClient.Init(settings.Twilio.AccountSid, settings.Twilio.AuthToken)
-            |> ignore
         else
-            () |> ignore
+            ()
 
         let contentRoot = Directory.GetCurrentDirectory()
         let webRoot = Path.Combine(contentRoot, "wwwroot")

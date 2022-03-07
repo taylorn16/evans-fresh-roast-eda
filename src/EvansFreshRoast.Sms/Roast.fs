@@ -79,7 +79,6 @@ let handleEvent
                     )
                     // TODO: this block is repetitive
         }
-
     
     | OrderPlaced { CustomerId = customerId; LineItems = lineItems } ->
         async {

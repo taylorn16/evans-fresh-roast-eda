@@ -45,6 +45,8 @@ let update msg state =
         { state with SaveCustomer = Resolved result }, Cmd.none
         
     | CustomerCreated id ->
+        printfn $"%A{state}"
+        
         match state.SaveCustomer with
         | Resolved(Ok { AggregateId = customerId }) when customerId = id ->
             state, Route.navigateTo Route.Customers

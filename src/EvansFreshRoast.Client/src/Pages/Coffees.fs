@@ -45,29 +45,38 @@ let view (state: State) (_: Msg -> unit) =
         ]
     
     | Resolved(Ok coffees) ->
-        fragment [] (coffees |> List.map(fun coffee ->
-            div [ Class "card mt-2" ] [
-                div [ Class "card-body" ] [
-                    if coffee.IsActive then
-                        span [ Class "badge bg-primary float-end fw-light fs-6" ] [ str "Active" ]
-                    else
-                        span [ Class "badge bg-light text-dark float-end fw-light fs-6" ] [ str "Inactive" ]
-                    h5 [ Class "card-title" ] [ str coffee.Name ]
-                    p [ Class "card-text" ] [
-                        span [ Class "text-muted" ] [
-                            str $"""${coffee.PricePerBag.ToString("0.00")} / {coffee.WeightPerBag.ToString("0.0")} oz"""
+        fragment [] [
+            div [ Class "my-4 d-flex justify-content-between align-items-center" ] [
+                h2 [ Class "my-0" ] [ str "Coffees" ]
+                a [
+                    Class "btn btn-primary"
+                    Href <| Route.toHash Route.NewCoffee
+                ] [ str "New Coffee" ]
+            ]
+            fragment [] (coffees |> List.map(fun coffee ->
+                div [ Class "card mt-3" ] [
+                    div [ Class "card-body" ] [
+                        h5 [ Class "card-title" ] [ str coffee.Name ]
+                        p [ Class "card-text" ] [
+                            if coffee.IsActive then
+                                span [ Class "badge bg-success fw-light text-uppercase me-2" ] [ str "Active" ]
+                            else
+                                span [ Class "badge bg-secondary fw-light text-uppercase me-2" ] [ str "Inactive" ]
+                            span [ Class "text-muted" ] [
+                                str $"""${coffee.PricePerBag.ToString("0.00")} / {coffee.WeightPerBag.ToString("0.0")} oz"""
+                            ]
+                            br []
+                            span [ Class "d-block pt-2s" ] [ str coffee.Description ]
                         ]
-                        br []
-                        str coffee.Description
+                        a [
+                            Class "btn btn-outline-primary"
+                            Href <| Route.toHash (Route.Coffee coffee.Id)
+                        ] [
+                            str "See Details"
+                        ]
                     ]
-                    a [
-                        Class "btn btn-primary"
-                        Href <| Route.toHash (Route.Coffee coffee.Id)
-                    ] [
-                        str "See Details"
-                    ]
-                ]
-            ]))
+                ]))
+        ]
 
     | _ ->
         div [
