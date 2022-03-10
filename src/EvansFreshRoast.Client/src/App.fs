@@ -24,5 +24,4 @@ let getLocalStorageSession() =
 Program.mkProgram (init <| getLocalStorageSession()) update view
 |> Program.toNavigable (UrlParser.parseHash Route.parse) setCurrentPage 
 |> Program.withReactSynchronous "app-root"
-|> Program.withConsoleTrace
 |> Program.run

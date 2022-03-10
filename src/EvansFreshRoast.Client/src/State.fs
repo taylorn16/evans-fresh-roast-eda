@@ -86,7 +86,7 @@ let getSignalRConnectCmd session =
     Cmd.SignalR.connect SignalRHubRegistered <| fun hub ->
         hub.withUrl("/api/v1/ws/domain-events")
             .withAutomaticReconnect()
-            .configureLogging(LogLevel.Trace)
+            .configureLogging(LogLevel.Warning)
             .onMessage SignalRMessageReceived
 
 // TODO: move to separate file

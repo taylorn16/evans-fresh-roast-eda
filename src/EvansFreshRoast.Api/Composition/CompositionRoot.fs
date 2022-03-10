@@ -31,7 +31,8 @@ type CompositionRoot =
       TwilioFromPhoneNumber: UsPhoneNumber
       ReadStoreConnectionString: ConnectionString
       TwilioAccountSid: string
-      JwtConfig: JwtConfig }
+      JwtConfig: JwtConfig
+      VenmoHandle: string }
     member this.CustomerCommandHandler with get () =
         Aggregate.createHandler
             Customer.aggregate
@@ -127,4 +128,5 @@ module CompositionRoot =
           TwilioFromPhoneNumber = UsPhoneNumber.create settings.Twilio.FromPhoneNumber |> unsafeAssertOk
           ReadStoreConnectionString = readStoreConnectionString
           TwilioAccountSid = settings.Twilio.AccountSid
-          JwtConfig = settings.Jwt }
+          JwtConfig = settings.Jwt
+          VenmoHandle = settings.VenmoHandle }

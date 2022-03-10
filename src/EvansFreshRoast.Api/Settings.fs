@@ -32,4 +32,5 @@ type Settings =
     { ConnectionStrings: ConnectionStrings
       RabbitMq: RabbitMq
       Twilio: Twilio
-      Jwt: JwtConfig }
+      Jwt: JwtConfig
+      VenmoHandle: string }

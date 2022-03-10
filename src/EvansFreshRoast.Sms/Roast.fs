@@ -33,6 +33,7 @@ let handleEvent
     (getRoast: Id<Roast> -> Async<option<RoastDetailedView>>)
     (getAllCustomers: unit -> Async<list<Id<Customer> * Customer>>)
     (getCustomer: Id<Customer> -> Async<option<Id<Customer> * Customer>>)
+    (venmoHandle: string)
     (event: DomainEvent<Roast, Event>)
     =
     match event.Body with
@@ -65,7 +66,8 @@ let handleEvent
                     + coffeesSummary + "\n"
                     + "To place an order, reply with each item on a new line in the format [qty][id], "
                     + "e.g., '2A' on the first line and '4C' on the next line.\n\n"
-                    + $"You have until {orderByDate} to place your order."
+                    + $"You have until {orderByDate} to place your order. "
+                    + $"Reminder: Evan's Venmo handle is {venmoHandle}."
                     |> SmsMsg.create
                     |> unsafeAssertOk
 
@@ -164,10 +166,11 @@ let handleEvent
                         | PaidInvoice _ ->
                             baseMsg
                         | UnpaidInvoice _ ->
-                            baseMsg + "\n\nIf you haven't paid yet, please do so soon!"
+                            baseMsg
+                            + "\n\nIf you haven't paid yet, please do so soon! "
+                            + $"Reminder: Evan's Venmo handle is {venmoHandle}."
 
                     msg |> SmsMsg.create |> unsafeAssertOk, cust.PhoneNumber
-                
 
                 return! roast.Orders
                 |> List.choose (fun ord ->

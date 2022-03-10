@@ -33,5 +33,6 @@ type RoastSmsConsumer
             compositionRoot.GetRoast
             compositionRoot.GetAllCustomers
             compositionRoot.GetCustomer
+            compositionRoot.VenmoHandle
             event
         |> Async.map (Result.map <| fun _ -> None)

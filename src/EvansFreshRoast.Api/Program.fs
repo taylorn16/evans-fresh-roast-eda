@@ -67,7 +67,8 @@ module Program =
         | false ->
             app
                 .UseGiraffeErrorHandler(errorHandler)
-                .UseHttpsRedirection())
+                .UseHttpsRedirection()
+                .UseHsts())
             .UseCors(configureCors)
             .UseStaticFiles()
             .UseAuthentication()

@@ -217,7 +217,7 @@ module Roast =
 
             let description = CoffeeDescription.value coffee.Description
 
-            $"{CoffeeReferenceId.value referenceId}: {name} ({price:C2}/{weight:N} oz) - {description}"
+            $"{CoffeeReferenceId.value referenceId}: {name} (${price:N2}/{weight:N2} oz) - {description}"
 
         roast.Coffees
         |> Seq.sortBy (fun kvp -> CoffeeReferenceId.value kvp.Key)
